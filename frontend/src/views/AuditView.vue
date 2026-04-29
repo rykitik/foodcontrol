@@ -1,51 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import AuditFiltersPanel from '@/components/audit/AuditFiltersPanel.vue'
+import AuditLogTable from '@/components/audit/AuditLogTable.vue'
+import AuditSummaryCards from '@/components/audit/AuditSummaryCards.vue'
+import { useAuditWorkspace } from '@/composables/useAuditWorkspace'
 
-import { roleHome } from '@/config/navigation'
-import { listAuditLogs } from '@/services/api'
-import { useAuthStore } from '@/stores/auth'
-import type { AuditLogEntry } from '@/types'
-
-const auth = useAuthStore()
-const router = useRouter()
-const homePath = computed(() => roleHome[auth.userRole ?? 'admin'])
-const backLabel = computed(() => (homePath.value === '/admin' ? 'К админке' : 'К дашборду'))
-
-const logs = ref<AuditLogEntry[]>([])
-const loading = ref(false)
-const actionFilter = ref('')
-const entityFilter = ref('')
-
-const filteredLogs = computed(() =>
-  logs.value.filter((entry) => {
-    const actionOk = !actionFilter.value || entry.action.includes(actionFilter.value)
-    const entityOk = !entityFilter.value || (entry.entity_type ?? '').includes(entityFilter.value)
-    return actionOk && entityOk
-  }),
-)
-
-async function refresh() {
-  loading.value = true
-  try {
-    logs.value = await listAuditLogs(auth.token)
-  } finally {
-    loading.value = false
-  }
-}
-
-function formatDetails(details: Record<string, unknown>) {
-  const entries = Object.entries(details ?? {})
-  if (!entries.length) {
-    return 'Без дополнительных данных'
-  }
-
-  return entries
-    .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(', ') : String(value)}`)
-    .join(' · ')
-}
-
-onMounted(refresh)
+const workspace = useAuditWorkspace()
 </script>
 
 <template>
@@ -57,45 +16,47 @@ onMounted(refresh)
         <p class="audit-copy">Фильтрация спорных действий, ручных правок и операций по студентам, талонам и отчетам.</p>
       </div>
       <div class="heading-actions">
-        <p-button :label="backLabel" severity="secondary" outlined @click="router.push(homePath)" />
+        <p-button :label="workspace.backLabel.value" severity="secondary" outlined @click="workspace.goBack" />
       </div>
     </div>
 
-    <p-card class="content-card">
-      <template #title>Фильтры</template>
-      <template #content>
-        <div class="form-grid">
-          <label class="field">
-            <span>Действие</span>
-            <p-input-text v-model="actionFilter" placeholder="login, create_user, record_meal..." />
-          </label>
-          <label class="field">
-            <span>Сущность</span>
-            <p-input-text v-model="entityFilter" placeholder="user, student, report..." />
-          </label>
-        </div>
-      </template>
-    </p-card>
+    <AuditSummaryCards
+      :filtered-count="workspace.filteredCount.value"
+      :loaded-count="workspace.loadedCount.value"
+      :today-count="workspace.todayCount.value"
+      :unique-actors-count="workspace.uniqueActorsCount.value"
+      :attention-count="workspace.attentionCount.value"
+    />
 
-    <p-card class="content-card">
-      <template #title>Последние события</template>
-      <template #content>
-        <div v-if="loading" class="muted-block">Загружаем журнал...</div>
-        <div v-else-if="filteredLogs.length" class="report-list">
-          <div v-for="entry in filteredLogs" :key="entry.id" class="report-item">
-            <div>
-              <strong>{{ entry.action }}</strong>
-              <p>{{ entry.user_name }} · {{ entry.entity_type || 'system' }} · {{ entry.created_at }}</p>
-              <p>{{ formatDetails(entry.details) }}</p>
-            </div>
-            <div class="report-amounts">
-              <span>{{ entry.ip_address || 'n/a' }}</span>
-            </div>
-          </div>
-        </div>
-        <div v-else class="muted-block">По выбранным фильтрам событий нет.</div>
-      </template>
-    </p-card>
+    <AuditFiltersPanel
+      :action="workspace.filters.action"
+      :entity-type="workspace.filters.entityType"
+      :actor="workspace.filters.actor"
+      :ip-address="workspace.filters.ipAddress"
+      :date-from="workspace.filters.dateFrom"
+      :date-to="workspace.filters.dateTo"
+      :limit="workspace.filters.limit"
+      :action-options="workspace.actionOptions.value"
+      :entity-options="workspace.entityOptions.value"
+      :limit-options="workspace.limitOptions"
+      :loading="workspace.loading.value"
+      @update:action="workspace.filters.action = $event"
+      @update:entity-type="workspace.filters.entityType = $event"
+      @update:actor="workspace.filters.actor = $event"
+      @update:ip-address="workspace.filters.ipAddress = $event"
+      @update:date-from="workspace.filters.dateFrom = $event"
+      @update:date-to="workspace.filters.dateTo = $event"
+      @update:limit="workspace.filters.limit = $event"
+      @apply="workspace.applyFilters"
+      @reset="workspace.resetFilters"
+      @refresh="workspace.refresh"
+    />
+
+    <AuditLogTable
+      :entries="workspace.filteredLogs.value"
+      :loading="workspace.loading.value"
+      :error="workspace.error.value"
+    />
   </section>
 </template>
 

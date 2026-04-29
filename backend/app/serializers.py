@@ -327,11 +327,12 @@ def serialize_log(entry: Log, *, state: LogSerializerState | object = _MISSING_S
 
 
 def _serialize_log_with_state(entry: Log, *, state: LogSerializerState):
+    detail_user_name = (entry.details or {}).get("username") or (entry.details or {}).get("full_name")
     user_name = state.user_names_by_user_id.get(entry.user_id) if entry.user_id else None
     return {
         "id": entry.id,
         "user_id": entry.user_id,
-        "user_name": user_name or "Система",
+        "user_name": user_name or detail_user_name or "Система",
         "action": entry.action,
         "entity_type": entry.entity_type,
         "entity_id": entry.entity_id,

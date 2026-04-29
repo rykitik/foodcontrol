@@ -44,7 +44,7 @@ const emit = defineEmits<{
 const form = reactive({
   full_name: '',
   group_name: '',
-  building_id: props.buildingId ?? 1,
+  building_id: props.buildingId ?? 0,
   category_id: 0,
 })
 const filteredGroupSuggestions = ref<string[]>([])
@@ -54,7 +54,7 @@ const buildingSummary = computed(() => {
     return props.buildingLabel
   }
   const option = buildingOptions.find((item) => item.value === form.building_id)
-  return option?.label ?? (form.building_id ? `Корпус ${form.building_id}` : 'Корпус не назначен')
+  return option?.label ?? (form.building_id ? `Корпус ${form.building_id}` : 'Корпус не выбран')
 })
 
 const canSubmit = computed(
@@ -67,7 +67,7 @@ function syncFormDefaults() {
   if (props.lockBuilding && props.buildingId != null) {
     form.building_id = props.buildingId
   } else if (!form.building_id) {
-    form.building_id = props.buildingId ?? 1
+    form.building_id = props.buildingId ?? 0
   }
 
   if (!props.categories.some((category) => category.id === form.category_id)) {
@@ -78,7 +78,7 @@ function syncFormDefaults() {
 function resetForm() {
   form.full_name = ''
   form.group_name = ''
-  form.building_id = props.buildingId ?? 1
+  form.building_id = props.buildingId ?? 0
   form.category_id = props.categories[0]?.id ?? 0
 }
 

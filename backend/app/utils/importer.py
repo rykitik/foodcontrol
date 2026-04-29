@@ -74,6 +74,10 @@ def parse_int(value, field_name: str, required: bool = True) -> int | None:
         raise ImportValidationError(field_name, f"Поле {field_name} должно быть числом") from error
 
 
+def parse_optional_int(value, field_name: str) -> int | None:
+    return parse_int(value, field_name, required=False)
+
+
 def load_import_dataframe(upload: FileStorage, entity: str) -> pd.DataFrame:
     if not upload or not upload.filename:
         raise ImportValidationError("file", "Файл не передан")

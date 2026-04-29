@@ -8,7 +8,7 @@ import {
   userStatusFilterOptions,
   type UserStatusFilter,
 } from '@/config/adminFilters'
-import { roleLabels } from '@/config/navigation'
+import { resolveRoleHome, roleLabels } from '@/config/navigation'
 import { buildingOptions, userRoleOptions } from '@/config/options'
 import { studentStatusFilterOptions } from '@/config/studentFilters'
 import {
@@ -18,6 +18,7 @@ import {
   getCategories,
   getStudentHistory,
   importEntityFile,
+  listAuditLogs,
   listStudentGroups,
   listStudentsPage,
   listUsers,
@@ -27,10 +28,12 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { copyTextToClipboard } from '@/utils/clipboard'
 import { saveBlob } from '@/utils/files'
+import { toMoscowDateKey } from '@/utils/adminPresentation'
 import { mergeStudentGroupName } from '@/utils/studentGroups'
 import { formatStudentCode, studentCodeLabel } from '@/utils/studentPresentation'
 import type {
   Category,
+  AuditLogEntry,
   ImportSummary,
   MealRecord,
   PaginatedResult,
@@ -45,7 +48,7 @@ import type {
   UserUpdateRequest,
 } from '@/types'
 
-export type AdminSection = 'users' | 'students' | 'import' | 'catalogs' | 'audit' | 'settings'
+export type AdminSection = 'users' | 'students' | 'import' | 'catalogs' | 'audit'
 
 export interface AdminMetricCard {
   label: string
@@ -63,6 +66,7 @@ export function useAdminWorkspace() {
   const users = ref<User[]>([])
   const studentsPage = ref<PaginatedResult<Student> | null>(null)
   const categories = ref<Category[]>([])
+  const auditLogs = ref<AuditLogEntry[]>([])
   const studentGroupSuggestions = ref<string[]>([])
   const loading = ref(false)
   const importLoadingEntity = ref<'students' | null>(null)
@@ -88,8 +92,7 @@ export function useAdminWorkspace() {
   const userEditorRef = ref<HTMLElement | null>(null)
   const studentEditorRef = ref<HTMLElement | null>(null)
   const studentHistory = ref<MealRecord[]>([])
-  const defaultBuilding = ref<number | 'all'>('all')
-  const rolePreview = ref<UserRole>('social')
+  const rolePreview = ref<UserRole>(auth.rolePreview ?? auth.previewableRoles[0] ?? 'social')
 
   const editUserForm = reactive({
     full_name: '',
@@ -107,10 +110,6 @@ export function useAdminWorkspace() {
     is_active: true,
   })
 
-  const defaultBuildingOptions = computed(() => [
-    { label: 'Все корпуса', value: 'all' as const },
-    ...buildingOptions,
-  ])
   const userRoleFilterOptions = computed(() => [{ label: 'Все роли', value: 'all' as const }, ...userRoleOptions])
   const rolePreviewOptions = computed(() =>
     auth.previewableRoles.map((role) => ({
@@ -196,6 +195,18 @@ export function useAdminWorkspace() {
       tone: 'orange',
     },
   ])
+
+  const recentAuditEntries = computed(() => auditLogs.value.slice(0, 6))
+  const todayAuditEntries = computed(() => {
+    const todayKey = toMoscowDateKey(new Date())
+
+    return auditLogs.value.filter((entry) => {
+      return toMoscowDateKey(entry.created_at) === todayKey
+    })
+  })
+  const auditActionsToday = computed(() => todayAuditEntries.value.length)
+  const auditUsersToday = computed(() => new Set(todayAuditEntries.value.map((entry) => entry.user_name)).size)
+  const latestAuditEntry = computed(() => auditLogs.value[0] ?? null)
 
   function resetAlerts() {
     message.value = ''
@@ -342,10 +353,16 @@ export function useAdminWorkspace() {
   }
 
   async function loadData() {
-    const [usersData, categoryData, groupData] = await Promise.all([listUsers(auth.token), getCategories(), listStudentGroups()])
+    const [usersData, categoryData, groupData, auditData] = await Promise.all([
+      listUsers(auth.token),
+      getCategories(),
+      listStudentGroups(),
+      listAuditLogs(auth.token).catch(() => []),
+    ])
     users.value = usersData
     categories.value = categoryData
     studentGroupSuggestions.value = groupData
+    auditLogs.value = auditData
     await loadStudentsPage()
   }
 
@@ -499,7 +516,12 @@ export function useAdminWorkspace() {
 
   function applyRolePreview() {
     auth.setRolePreview(rolePreview.value)
-    void router.push(rolePreview.value === 'social' ? '/social' : rolePreview.value === 'head_social' ? '/dashboard' : '/accountant')
+    void router.push(resolveRoleHome(rolePreview.value))
+  }
+
+  function openRoleWorkspace(role: UserRole, path: string) {
+    auth.setRolePreview(role)
+    void router.push(path)
   }
 
   function clearRolePreview() {
@@ -514,9 +536,10 @@ export function useAdminWorkspace() {
 
   function navigateToSection(section: AdminSection) {
     activeSection.value = section
-    if (section === 'audit') {
-      void router.push('/audit')
-    }
+  }
+
+  function openAuditPage() {
+    void router.push('/audit')
   }
 
   let studentSearchTimer: ReturnType<typeof setTimeout> | null = null
@@ -564,12 +587,13 @@ export function useAdminWorkspace() {
     buildingOptions,
     canCreateAdminUsers,
     categories,
-    defaultBuilding,
-    defaultBuildingOptions,
     editStudentForm,
     editUserForm,
     error,
     filteredUsers,
+    auditActionsToday,
+    auditUsersToday,
+    latestAuditEntry,
     hasStudentFilters,
     hasUserFilters,
     importLoadingEntity,
@@ -578,6 +602,7 @@ export function useAdminWorkspace() {
     metricCards,
     rolePreview,
     rolePreviewOptions,
+    recentAuditEntries,
     selectedStudent,
     selectedStudentDisplayCard,
     selectedStudentEffectiveBuilding,
@@ -622,7 +647,9 @@ export function useAdminWorkspace() {
     formatStudentCode,
     logout,
     navigateToSection,
+    openAuditPage,
     openStudentCard,
+    openRoleWorkspace,
     resetStudentFilters,
     resetUserFilters,
     runStudentImport,

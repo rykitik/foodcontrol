@@ -18,6 +18,7 @@ const actualRoleLabel = computed(() => roleLabels[auth.userRole ?? 'social'])
 const homeRoute = computed(() => resolveRoleHome(auth.effectiveRole))
 const buildingLabel = computed(() => auth.user?.building_name || 'Все корпуса')
 const kioskShell = computed(() => route.matched.some((record) => record.meta.kiosk === true))
+const fullscreenShell = computed(() => route.matched.some((record) => record.meta.fullscreen === true))
 const compactShell = computed(() => route.path.startsWith('/cashier') && !kioskShell.value)
 const isNetworkUnreachable = computed(
   () => auth.isAuthenticated && auth.sessionState === 'network_unreachable',
@@ -47,9 +48,13 @@ function logout() {
 <template>
   <div
     class="app-shell"
-    :class="{ 'app-shell-compact': compactShell, 'app-shell-kiosk': kioskShell }"
+    :class="{
+      'app-shell-compact': compactShell,
+      'app-shell-kiosk': kioskShell,
+      'app-shell-fullscreen': fullscreenShell,
+    }"
   >
-    <header v-if="!kioskShell" class="shell-header">
+    <header v-if="!kioskShell && !fullscreenShell" class="shell-header">
       <div class="shell-header-main">
         <RouterLink :to="homeRoute" class="brand-block shell-brand">
           <div class="brand-mark" aria-hidden="true">
@@ -89,11 +94,17 @@ function logout() {
       </div>
     </header>
 
-    <div v-if="isNetworkUnreachable" class="shell-status-banner shell-status-banner-warn">
+    <div v-if="isNetworkUnreachable && !fullscreenShell" class="shell-status-banner shell-status-banner-warn">
       Сервер недоступен. Данные могут не обновляться, проверьте сеть.
     </div>
 
-    <main class="shell-content" :class="{ 'shell-content-kiosk': kioskShell }">
+    <main
+      class="shell-content"
+      :class="{
+        'shell-content-kiosk': kioskShell,
+        'shell-content-fullscreen': fullscreenShell,
+      }"
+    >
       <RouterView v-slot="{ Component, route: currentRoute }">
         <KeepAlive>
           <component

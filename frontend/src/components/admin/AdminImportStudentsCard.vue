@@ -19,7 +19,7 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
 const isDragOver = ref(false)
 
-const templateColumns = ['ФИО', 'Группа', 'Корпус', 'Категория']
+const templateColumns = computed(() => ['ФИО', 'Группа', 'Корпус', 'Категория'])
 
 const importSteps = [
   {
@@ -147,6 +147,9 @@ function runImport() {
             <div class="columns-list">
               <span v-for="column in templateColumns" :key="column" class="column-chip">{{ column }}</span>
             </div>
+            <p class="import-note">
+              Корпус обязателен в каждой строке файла. Если он не указан, импорт вернет ошибку валидации для этой строки.
+            </p>
           </div>
         </section>
 
@@ -367,6 +370,13 @@ function runImport() {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.import-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .column-chip {

@@ -19,6 +19,10 @@
   overflow: hidden;
 }
 
+.app-shell-fullscreen {
+  padding: 0;
+}
+
 .shell-header,
 .content-card,
 .metric-card,
@@ -291,6 +295,13 @@
   padding: 0;
   gap: 0;
   overflow: hidden;
+}
+
+.app-shell-fullscreen .shell-content,
+.shell-content-fullscreen {
+  min-height: 100vh;
+  padding: 0;
+  gap: 0;
 }
 
 .page-stack,

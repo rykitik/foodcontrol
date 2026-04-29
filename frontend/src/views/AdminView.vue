@@ -1,36 +1,58 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 
 import AdminImportStudentsCard from '@/components/admin/AdminImportStudentsCard.vue'
+import AdminAuditPanel from '@/components/admin/AdminAuditPanel.vue'
+import AdminCatalogsPanel from '@/components/admin/AdminCatalogsPanel.vue'
+import AdminHelpPanel from '@/components/admin/AdminHelpPanel.vue'
 import AdminMetricCards from '@/components/admin/AdminMetricCards.vue'
+import AdminRolePreviewPanel from '@/components/admin/AdminRolePreviewPanel.vue'
 import AdminSectionTabs from '@/components/admin/AdminSectionTabs.vue'
+import AdminStudentCreateModal from '@/components/admin/AdminStudentCreateModal.vue'
+import AdminUserCreateModal from '@/components/admin/AdminUserCreateModal.vue'
 import AdminStudentsPanel from '@/components/admin/AdminStudentsPanel.vue'
-import AdminUserCreateCard from '@/components/admin/AdminUserCreateCard.vue'
 import AdminUsersPanel from '@/components/admin/AdminUsersPanel.vue'
 import BrandLogo from '@/components/common/BrandLogo.vue'
 import AppIcon from '@/components/icons/AppIcon.vue'
-import StudentCreateFormCard from '@/components/students/StudentCreateFormCard.vue'
 import { APP_NAME } from '@/config/app'
 import { useAdminWorkspace, type AdminSection } from '@/composables/useAdminWorkspace'
+import type { UserRole } from '@/types'
 import { getAdminRoleLabel } from '@/utils/adminPresentation'
 
-const router = useRouter()
 const workspace = useAdminWorkspace()
 
-const sidebarItems: Array<{ label: string; section: AdminSection; icon: 'students' | 'student' | 'excel' | 'document' | 'reports' | 'settings' }> = [
+const sidebarItems: Array<{ label: string; section: AdminSection; icon: 'students' | 'student' | 'excel' | 'document' | 'reports' }> = [
   { label: 'Пользователи', section: 'users', icon: 'students' },
   { label: 'Студенты', section: 'students', icon: 'student' },
   { label: 'Импорт студентов', section: 'import', icon: 'excel' },
   { label: 'Справочники', section: 'catalogs', icon: 'document' },
   { label: 'Аудит действий', section: 'audit', icon: 'reports' },
-  { label: 'Настройки системы', section: 'settings', icon: 'settings' },
 ]
 
 const activeSectionModel = computed({
   get: () => workspace.activeSection.value,
   set: (value: AdminSection) => workspace.navigateToSection(value),
 })
+
+const currentPreviewLabel = computed(() => getAdminRoleLabel(workspace.auth.effectiveRole ?? 'social'))
+const previewModeOptions = computed(() => [
+  { label: 'Администратор', value: 'admin' as const },
+  ...workspace.rolePreviewOptions.value,
+])
+const previewModeModel = computed<'admin' | UserRole>({
+  get: () => (workspace.auth.isRolePreviewActive ? workspace.rolePreview.value : 'admin'),
+  set: (value) => {
+    if (value === 'admin') {
+      workspace.clearRolePreview()
+      return
+    }
+    workspace.rolePreview.value = value
+  },
+})
+
+function openPreviewMode() {
+  workspace.applyRolePreview()
+}
 </script>
 
 <template>
@@ -58,30 +80,27 @@ const activeSectionModel = computed({
         </button>
       </nav>
 
-      <section class="admin-role-card">
-        <span class="admin-sidebar__label">Режим просмотра роли</span>
-        <p>Вы просматриваете систему как другой пользователь</p>
-        <p-dropdown
-          v-model="workspace.rolePreview.value"
-          :options="workspace.rolePreviewOptions.value"
-          option-label="label"
-          option-value="value"
-        />
-        <p-button label="Перейти в режим" @click="workspace.applyRolePreview" />
-        <button type="button" class="admin-role-card__back" @click="workspace.clearRolePreview">
-          <AppIcon name="chevronLeft" />
-          Вернуться к администратору
-        </button>
-      </section>
-
       <footer class="admin-sidebar__user">
-        <span class="admin-avatar" aria-hidden="true">
-          <AppIcon name="student" />
-        </span>
-        <span>
-          <strong>{{ workspace.auth.displayName }}</strong>
-          <small>{{ getAdminRoleLabel(workspace.auth.userRole ?? 'admin') }}</small>
-        </span>
+        <div class="admin-sidebar__user-head">
+          <span class="admin-avatar" aria-hidden="true">
+            <AppIcon name="student" />
+          </span>
+          <span>
+            <strong>{{ workspace.auth.displayName }}</strong>
+            <small>{{ getAdminRoleLabel(workspace.auth.userRole ?? 'admin') }}</small>
+          </span>
+        </div>
+
+        <AdminRolePreviewPanel
+          v-if="workspace.rolePreviewOptions.value.length"
+          v-model="previewModeModel"
+          :options="previewModeOptions"
+          :current-label="currentPreviewLabel"
+          :preview-active="workspace.auth.isRolePreviewActive"
+          :account-role-label="getAdminRoleLabel(workspace.auth.userRole ?? 'admin')"
+          @apply="openPreviewMode"
+          @reset="workspace.clearRolePreview"
+        />
       </footer>
     </aside>
 
@@ -93,15 +112,6 @@ const activeSectionModel = computed({
         </div>
 
         <div class="admin-main__actions">
-          <label class="admin-default-building">
-            <span>Корпус по умолчанию</span>
-            <p-dropdown
-              v-model="workspace.defaultBuilding.value"
-              :options="workspace.defaultBuildingOptions.value"
-              option-label="label"
-              option-value="value"
-            />
-          </label>
           <p-button label="Выйти" severity="secondary" outlined @click="workspace.logout">
             <template #icon>
               <AppIcon name="signOut" />
@@ -132,20 +142,15 @@ const activeSectionModel = computed({
         @update:status-filter="workspace.userStatusFilter.value = $event"
         @update:building-filter="workspace.userBuildingFilter.value = $event"
         @reset-filters="workspace.resetUserFilters"
-        @create-user="workspace.showUserCreate.value = !workspace.showUserCreate.value"
+        @create-user="workspace.showUserCreate.value = true"
         @edit-user="workspace.fillUserEditor"
       />
 
-      <section v-if="workspace.activeSection.value === 'users' && workspace.showUserCreate.value" class="admin-drawer-card">
-        <AdminUserCreateCard
-          :loading="workspace.loading.value"
-          :reset-key="workspace.userFormResetKey.value"
-          :allow-admin-role="workspace.canCreateAdminUsers.value"
-          @submit="workspace.submitUser"
-        />
-      </section>
-
-      <section v-if="workspace.activeSection.value === 'users' && workspace.selectedUser.value" ref="workspace.userEditorRef.value" class="admin-edit-card">
+      <section
+        v-if="workspace.activeSection.value === 'users' && workspace.selectedUser.value"
+        :ref="(el) => (workspace.userEditorRef.value = el as HTMLElement | null)"
+        class="admin-edit-card"
+      >
         <header>
           <h2>Редактирование пользователя</h2>
           <p>{{ workspace.selectedUser.value.username }}</p>
@@ -209,27 +214,17 @@ const activeSectionModel = computed({
         @update:status-filter="workspace.studentStatusFilter.value = $event"
         @update:page-size="workspace.studentPageSize.value = $event"
         @reset-filters="workspace.resetStudentFilters"
-        @create-student="workspace.showStudentCreate.value = !workspace.showStudentCreate.value"
+        @create-student="workspace.showStudentCreate.value = true"
         @edit-student="workspace.fillStudentEditor"
         @open-student="workspace.openStudentCard"
         @change-page="workspace.changeStudentPage"
       />
 
-      <section v-if="workspace.activeSection.value === 'students' && workspace.showStudentCreate.value" class="admin-drawer-card">
-        <StudentCreateFormCard
-          :categories="workspace.categories.value"
-          :loading="workspace.loading.value"
-          :reset-key="workspace.studentFormResetKey.value"
-          :building-id="workspace.defaultBuilding.value === 'all' ? 1 : workspace.defaultBuilding.value"
-          :group-suggestions="workspace.studentGroupSuggestions.value"
-          compact
-          eyebrow="Создание студента"
-          title="Новый студент"
-          @submit="workspace.submitStudent"
-        />
-      </section>
-
-      <section v-if="workspace.activeSection.value === 'students' && workspace.selectedStudent.value" ref="workspace.studentEditorRef.value" class="admin-edit-card">
+      <section
+        v-if="workspace.activeSection.value === 'students' && workspace.selectedStudent.value"
+        :ref="(el) => (workspace.studentEditorRef.value = el as HTMLElement | null)"
+        class="admin-edit-card"
+      >
         <header>
           <h2>Редактирование студента</h2>
           <p>{{ workspace.studentCodeLabel }} {{ workspace.selectedStudentDisplayCard.value }} · {{ workspace.selectedStudentEffectiveBuilding.value }}</p>
@@ -279,38 +274,49 @@ const activeSectionModel = computed({
         />
       </section>
 
-      <section v-if="workspace.activeSection.value === 'catalogs'" class="admin-drawer-card">
-        <header class="admin-simple-header">
-          <h2>Справочники</h2>
-          <p>Категории питания и связанные настройки редактируются в отдельном разделе, чтобы не смешивать справочники с учетными записями.</p>
-        </header>
-        <div class="admin-category-list">
-          <article v-for="category in workspace.categories.value" :key="category.id">
-            <strong>{{ category.name }}</strong>
-            <span>{{ category.code }}</span>
-          </article>
-        </div>
-        <p-button label="Открыть категории" @click="router.push('/categories-settings')" />
-      </section>
+      <AdminCatalogsPanel
+        v-if="workspace.activeSection.value === 'catalogs'"
+        :categories="workspace.categories.value"
+      />
 
-      <section v-if="workspace.activeSection.value === 'settings'" class="admin-drawer-card">
-        <header class="admin-simple-header">
-          <h2>Настройки системы</h2>
-          <p>Раздел подготовлен как операционная точка входа. Критичные настройки лучше добавлять отдельными блоками, а не смешивать с пользователями.</p>
-        </header>
-      </section>
+      <AdminAuditPanel
+        v-if="workspace.activeSection.value === 'audit'"
+        :total-actions="workspace.auditActionsToday.value"
+        :active-users="workspace.auditUsersToday.value"
+        :latest-entry="workspace.latestAuditEntry.value"
+        :entries="workspace.recentAuditEntries.value"
+        @open-full="workspace.openAuditPage"
+      />
 
-      <footer class="admin-help">
-        <span>
-          <AppIcon name="info" />
-          Совет: используйте импорт для массовой загрузки студентов из Excel-файла.
-        </span>
-        <p-button label="Документация" severity="secondary" outlined>
-          <template #icon>
-            <AppIcon name="document" />
-          </template>
-        </p-button>
-      </footer>
+      <AdminHelpPanel
+        :preview-label="currentPreviewLabel"
+        :preview-active="workspace.auth.isRolePreviewActive"
+        :audit-actions-today="workspace.auditActionsToday.value"
+        @open-audit="workspace.openAuditPage"
+      />
+
+      <AdminUserCreateModal
+        :visible="workspace.showUserCreate.value"
+        :loading="workspace.loading.value"
+        :reset-key="workspace.userFormResetKey.value"
+        :allow-admin-role="workspace.canCreateAdminUsers.value"
+        @close="workspace.showUserCreate.value = false"
+        @submit="workspace.submitUser"
+      />
+
+      <AdminStudentCreateModal
+        :visible="workspace.showStudentCreate.value"
+        :categories="workspace.categories.value"
+        :loading="workspace.loading.value"
+        :reset-key="workspace.studentFormResetKey.value"
+        :building-id="null"
+        :building-label="null"
+        :lock-building="false"
+        :group-suggestions="workspace.studentGroupSuggestions.value"
+        :error-message="workspace.error.value"
+        @close="workspace.showStudentCreate.value = false"
+        @submit="workspace.submitStudent"
+      />
     </main>
   </div>
 </template>
@@ -393,7 +399,6 @@ const activeSectionModel = computed({
   color: #0866ff;
 }
 
-.admin-role-card,
 .admin-sidebar__user,
 .admin-help,
 .admin-drawer-card,
@@ -403,39 +408,18 @@ const activeSectionModel = computed({
   background: #fff;
 }
 
-.admin-role-card {
+.admin-sidebar__user {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
   margin-top: auto;
   padding: 18px;
 }
 
-.admin-role-card p {
-  margin: 0;
-  color: #5c6a82;
-  line-height: 1.45;
-}
-
-.admin-role-card__back {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  border: 0;
-  border-top: 1px solid #e5edf6;
-  background: transparent;
-  color: #0866ff;
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.admin-sidebar__user {
+.admin-sidebar__user-head {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 18px;
 }
 
 .admin-sidebar__user strong,
@@ -496,20 +480,9 @@ const activeSectionModel = computed({
 }
 
 .admin-main__actions {
+  flex-wrap: wrap;
   align-items: flex-end;
-}
-
-.admin-default-building {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 270px;
-}
-
-.admin-default-building span {
-  color: #5c6a82;
-  font-size: 13px;
-  font-weight: 700;
+  justify-content: flex-end;
 }
 
 .admin-alert {
@@ -579,45 +552,6 @@ const activeSectionModel = computed({
   gap: 12px;
 }
 
-.admin-category-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin: 20px 0;
-}
-
-.admin-category-list article {
-  padding: 14px;
-  border: 1px solid #e1e9f4;
-  border-radius: 12px;
-  background: #f8fafc;
-}
-
-.admin-category-list strong,
-.admin-category-list span {
-  display: block;
-}
-
-.admin-category-list span {
-  margin-top: 4px;
-  color: #64748b;
-}
-
-.admin-help {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: #f1f7ff;
-}
-
-.admin-help span {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  color: #40506a;
-}
-
 @media (max-width: 1180px) {
   .admin-layout {
     grid-template-columns: 1fr;
@@ -646,8 +580,5 @@ const activeSectionModel = computed({
     grid-template-columns: 1fr;
   }
 
-  .admin-default-building {
-    min-width: 0;
-  }
 }
 </style>

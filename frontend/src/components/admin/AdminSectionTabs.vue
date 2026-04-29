@@ -15,7 +15,6 @@ const tabs: Array<{ label: string; value: AdminSection }> = [
   { label: 'Импорт студентов', value: 'import' },
   { label: 'Справочники', value: 'catalogs' },
   { label: 'Аудит действий', value: 'audit' },
-  { label: 'Настройки системы', value: 'settings' },
 ]
 </script>
 

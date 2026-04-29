@@ -23,8 +23,31 @@ from app.services.accounting_documents.global_metadata import (
     save_accounting_document_global_metadata_values,
 )
 from app.services.meal_sheet_documents import build_meal_sheet_document_payload
+from app.utils.audit import log_action
 
 reports_bp = Blueprint("reports", __name__)
+
+
+def build_document_audit_details(parsed: dict):
+    details = {
+        "document_kind": parsed.get("document_kind"),
+        "category_id": parsed.get("category_id"),
+        "month": parsed.get("month"),
+        "year": parsed.get("year"),
+    }
+    if parsed.get("meal_type"):
+        details["meal_type"] = parsed["meal_type"]
+    return {key: value for key, value in details.items() if value is not None}
+
+
+def log_accounting_document_action(current_user, action: str, parsed: dict):
+    log_action(
+        current_user,
+        action,
+        "accounting_document",
+        None,
+        build_document_audit_details(parsed),
+    )
 
 
 def parse_period(payload):
@@ -155,6 +178,19 @@ def meal_sheet_document(current_user):
         author_name=current_user.full_name,
         include_reviewer=current_user.role != "social",
     )
+    log_action(
+        current_user,
+        "build_meal_sheet_document",
+        "report",
+        None,
+        {
+            "period_start": period_start.isoformat(),
+            "period_end": period_end.isoformat(),
+            "building_id": building_id,
+            "category_id": category_id,
+            "status": ticket_status,
+        },
+    )
     return jsonify({"data": document})
 
 
@@ -173,6 +209,7 @@ def accountant_meal_sheet_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
 
@@ -191,6 +228,7 @@ def accountant_meal_sheet_xlsx(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_accounting_document_action(current_user, "export_accounting_document_xlsx", parsed)
     return send_file(
         BytesIO(workbook_bytes),
         as_attachment=True,
@@ -214,6 +252,7 @@ def accountant_cost_statement_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
 
@@ -232,6 +271,7 @@ def accountant_cost_statement_xlsx(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_accounting_document_action(current_user, "export_accounting_document_xlsx", parsed)
     return send_file(
         BytesIO(workbook_bytes),
         as_attachment=True,
@@ -255,6 +295,7 @@ def accountant_cost_calculation_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
 
@@ -273,6 +314,7 @@ def accountant_cost_calculation_xlsx(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_accounting_document_action(current_user, "export_accounting_document_xlsx", parsed)
     return send_file(
         BytesIO(workbook_bytes),
         as_attachment=True,
@@ -304,6 +346,16 @@ def accountant_document_metadata_save(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_action(
+        current_user,
+        "save_accounting_document_metadata",
+        "accounting_document",
+        None,
+        {
+            **build_document_audit_details(parsed),
+            "field_count": len(values),
+        },
+    )
     return jsonify({"data": document})
 
 
@@ -322,6 +374,13 @@ def accountant_document_metadata_reset(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    log_action(
+        current_user,
+        "reset_accounting_document_metadata",
+        "accounting_document",
+        None,
+        build_document_audit_details(parsed),
+    )
     return jsonify({"data": document})
 
 
@@ -343,6 +402,13 @@ def accountant_document_global_metadata_save(current_user):
         values,
         updated_by_user_id=current_user.id,
     )
+    log_action(
+        current_user,
+        "save_accounting_document_global_metadata",
+        "accounting_document",
+        None,
+        {"field_count": len(values)},
+    )
     return jsonify({"data": {"values": saved_values}})
 
 
@@ -356,5 +422,12 @@ def accountant_document_global_metadata_reset(current_user):
 
     reset_values = reset_accounting_document_global_metadata_values(
         [str(key) for key in keys] if keys else None,
+    )
+    log_action(
+        current_user,
+        "reset_accounting_document_global_metadata",
+        "accounting_document",
+        None,
+        {"keys": [str(key) for key in keys] if keys else []},
     )
     return jsonify({"data": {"values": reset_values}})

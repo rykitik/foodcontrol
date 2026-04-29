@@ -90,8 +90,28 @@ def login():
             password_valid = False
 
     if not user or not password_valid:
+        log_action(
+            None,
+            "login_failed",
+            "user",
+            None,
+            {
+                "username": normalized_username,
+                "reason": "invalid_credentials",
+            },
+        )
         return jsonify({"error": "Неверный логин или пароль"}), 401
     if not user.is_active:
+        log_action(
+            user,
+            "login_failed",
+            "user",
+            user.id,
+            {
+                "username": normalized_username,
+                "reason": "user_disabled",
+            },
+        )
         return jsonify({"error": "Пользователь отключен"}), 403
 
     user.last_login = utc_now()

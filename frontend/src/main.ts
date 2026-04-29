@@ -57,6 +57,12 @@ listenAuthSessionExpired(() => {
 
 app.use(router)
 app.use(PrimeVue, {
+  zIndex: {
+    modal: 1200,
+    overlay: 1350,
+    menu: 1350,
+    tooltip: 1400,
+  },
   theme: {
     preset: Aura,
     options: {
