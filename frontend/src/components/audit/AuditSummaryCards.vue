@@ -52,13 +52,20 @@ const cards = computed(() => [
 }
 
 .audit-summary__icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   flex: 0 0 46px;
   width: 46px;
   height: 46px;
   border-radius: 12px;
+  line-height: 0;
+}
+
+.audit-summary__icon :deep(.app-icon) {
+  width: 20px;
+  height: 20px;
+  margin: auto;
+  transform: translateY(-0.5px);
 }
 
 .audit-summary__card > div {
