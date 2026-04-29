@@ -23,7 +23,7 @@ const showGuide = ref(false)
       <div>
         <span class="admin-help-panel__eyebrow">Памятка администратора</span>
         <h2>Операционная памятка</h2>
-        <p>Короткие подсказки по рабочему корпусу, режиму просмотра и контролю изменений в системе.</p>
+        <p>Короткие подсказки по импорту, режиму просмотра и контролю изменений в системе.</p>
       </div>
 
       <div class="admin-help-panel__facts">
@@ -37,7 +37,7 @@ const showGuide = ref(false)
         <article class="admin-help-fact">
           <AppIcon name="eye" />
           <div>
-            <strong>Режим просмотра</strong>
+            <strong>Текущий режим</strong>
             <span>{{ previewActive ? previewLabel : 'Режим администратора' }}</span>
           </div>
         </article>

@@ -16,7 +16,6 @@ import BrandLogo from '@/components/common/BrandLogo.vue'
 import AppIcon from '@/components/icons/AppIcon.vue'
 import { APP_NAME } from '@/config/app'
 import { useAdminWorkspace, type AdminSection } from '@/composables/useAdminWorkspace'
-import type { UserRole } from '@/types'
 import { getAdminRoleLabel } from '@/utils/adminPresentation'
 
 const workspace = useAdminWorkspace()
@@ -34,18 +33,15 @@ const activeSectionModel = computed({
   set: (value: AdminSection) => workspace.navigateToSection(value),
 })
 
-const currentPreviewLabel = computed(() => getAdminRoleLabel(workspace.auth.effectiveRole ?? 'social'))
-const previewModeOptions = computed(() => [
-  { label: 'Администратор', value: 'admin' as const },
-  ...workspace.rolePreviewOptions.value,
-])
-const previewModeModel = computed<'admin' | UserRole>({
-  get: () => (workspace.auth.isRolePreviewActive ? workspace.rolePreview.value : 'admin'),
+const currentPreviewLabel = computed(() =>
+  workspace.auth.isRolePreviewActive
+    ? getAdminRoleLabel(workspace.auth.effectiveRole ?? 'social')
+    : 'Режим администратора',
+)
+const previewModeOptions = computed(() => workspace.rolePreviewOptions.value)
+const previewModeModel = computed({
+  get: () => workspace.rolePreview.value,
   set: (value) => {
-    if (value === 'admin') {
-      workspace.clearRolePreview()
-      return
-    }
     workspace.rolePreview.value = value
   },
 })

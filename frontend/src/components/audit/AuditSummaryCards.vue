@@ -43,6 +43,7 @@ const cards = computed(() => [
 
 .audit-summary__card {
   display: flex;
+  align-items: flex-start;
   gap: 14px;
   padding: 18px;
   border: 1px solid #dce5f1;
@@ -54,9 +55,14 @@ const cards = computed(() => [
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 46px;
   width: 46px;
   height: 46px;
   border-radius: 12px;
+}
+
+.audit-summary__card > div {
+  min-width: 0;
 }
 
 .audit-summary__card small,

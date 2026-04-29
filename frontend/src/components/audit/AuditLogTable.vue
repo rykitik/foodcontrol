@@ -72,7 +72,7 @@ function isExpanded(entryId: number) {
             <dd>{{ item.value }}</dd>
           </template>
           <template v-if="entry.user_agent">
-            <dt>User-Agent</dt>
+            <dt>Браузер / клиент</dt>
             <dd>{{ entry.user_agent }}</dd>
           </template>
         </dl>
@@ -163,6 +163,9 @@ function isExpanded(entryId: number) {
 
 .audit-row__marker {
   display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
   color: #f97316;
 }
 
