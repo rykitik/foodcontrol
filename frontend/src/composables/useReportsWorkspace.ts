@@ -52,9 +52,9 @@ const METADATA_RESET_SUCCESS =
   'Общие реквизиты формы сброшены. Снова используются системные значения.'
 
 const GLOBAL_METADATA_SAVE_SUCCESS =
-  'Р РµРєРІРёР·РёС‚С‹ РѕСЂРіР°РЅРёР·Р°С†РёРё СЃРѕС…СЂР°РЅРµРЅС‹ РґР»СЏ РІСЃРµС… Р±СѓС…РіР°Р»С‚РµСЂРѕРІ. РџСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ Рё Excel РёСЃРїРѕР»СЊР·СѓСЋС‚ РѕРґРёРЅ РЅР°Р±РѕСЂ РґР°РЅРЅС‹С….'
+  'Реквизиты организации сохранены для всех бухгалтеров. Предпросмотр и Excel используют один набор данных.'
 const GLOBAL_METADATA_RESET_SUCCESS =
-  'Р РµРєРІРёР·РёС‚С‹ РѕСЂРіР°РЅРёР·Р°С†РёРё СЃР±СЂРѕС€РµРЅС‹. Р”РѕРєСѓРјРµРЅС‚С‹ СЃРЅРѕРІР° РёСЃРїРѕР»СЊР·СѓСЋС‚ СЃРёСЃС‚РµРјРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ.'
+  'Реквизиты организации сброшены. Документы снова используют системные значения.'
 
 export type ReportsWorkspaceOptions = {
   loadErrorMessage?: string
@@ -150,7 +150,7 @@ export function useReportsWorkspace(options: ReportsWorkspaceOptions = {}) {
     }
 
     if (selectedDocumentHasGlobalMetadata.value) {
-      return 'РџСЂРёРјРµРЅСЏСЋС‚СЃСЏ РѕР±С‰РёРµ СЂРµРєРІРёР·РёС‚С‹ РѕСЂРіР°РЅРёР·Р°С†РёРё'
+      return 'Применяются общие реквизиты организации'
     }
 
     return selectedDocumentHasCustomMetadata.value

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, cast
 
 from app.models import Category, HolidayCalendar, Log, MealRecord, Student, Ticket, User
@@ -339,5 +339,13 @@ def _serialize_log_with_state(entry: Log, *, state: LogSerializerState):
         "details": entry.details or {},
         "ip_address": entry.ip_address,
         "user_agent": entry.user_agent,
-        "created_at": entry.created_at.isoformat(),
+        "created_at": _serialize_utc_timestamp(entry.created_at),
     }
+
+
+def _serialize_utc_timestamp(value: datetime | None) -> str | None:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    return value.astimezone(UTC).isoformat().replace("+00:00", "Z")

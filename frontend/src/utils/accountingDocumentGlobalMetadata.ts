@@ -5,8 +5,6 @@ import type {
 
 const GLOBAL_ACCOUNTING_METADATA_KEYS = new Set([
   'institution',
-  'okudForm',
-  'okudCode',
   'division',
   'targetArticle',
   'expenseType',

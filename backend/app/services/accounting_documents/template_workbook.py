@@ -38,11 +38,14 @@ def build_cost_statement_template_workbook(payload: dict) -> tuple[Workbook, Cos
     return workbook, config
 
 
-def build_cost_calculation_template_workbook(payload: dict) -> tuple[Workbook, CostCalculationTemplateConfig]:
+def build_cost_calculation_template_workbook(
+    payload: dict,
+    custom_values: dict[str, str] | None = None,
+) -> tuple[Workbook, CostCalculationTemplateConfig]:
     config = resolve_cost_calculation_template(payload["category_code"])
     worksheet = _load_template_sheet(config.sheet_name, config.visible_range)
     _prepare_template_worksheet(worksheet, config)
-    populate_cost_calculation_worksheet(worksheet, payload, config)
+    populate_cost_calculation_worksheet(worksheet, payload, config, custom_values=custom_values)
     workbook = _crop_to_visible_workbook(worksheet, config.visible_range)
     workbook.active.title = _safe_sheet_title(_worksheet_title(payload, "cost_calculation"))
     return workbook, config

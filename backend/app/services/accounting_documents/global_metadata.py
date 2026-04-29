@@ -8,8 +8,6 @@ DEFAULT_ACCOUNTING_GLOBAL_METADATA_KEY = "default"
 GLOBAL_ACCOUNTING_DOCUMENT_METADATA_KEYS = frozenset(
     {
         "institution",
-        "okudForm",
-        "okudCode",
         "division",
         "targetArticle",
         "expenseType",

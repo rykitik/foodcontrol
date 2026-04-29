@@ -25,7 +25,7 @@ const cards = computed(() => [
       <span class="audit-summary__icon" aria-hidden="true">
         <AppIcon :name="card.icon" />
       </span>
-      <div>
+      <div class="audit-summary__content">
         <small>{{ card.label }}</small>
         <strong>{{ card.value }}</strong>
         <span>{{ card.note }}</span>
@@ -42,8 +42,9 @@ const cards = computed(() => [
 }
 
 .audit-summary__card {
-  display: flex;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
   gap: 14px;
   padding: 18px;
   border: 1px solid #dce5f1;
@@ -52,9 +53,9 @@ const cards = computed(() => [
 }
 
 .audit-summary__icon {
-  display: grid;
-  place-items: center;
-  flex: 0 0 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 46px;
   height: 46px;
   border-radius: 12px;
@@ -64,33 +65,32 @@ const cards = computed(() => [
 .audit-summary__icon :deep(.app-icon) {
   width: 20px;
   height: 20px;
-  margin: auto;
-  transform: translateY(-0.5px);
+  margin: 0;
 }
 
-.audit-summary__card > div {
+.audit-summary__content {
   min-width: 0;
 }
 
-.audit-summary__card small,
-.audit-summary__card strong,
-.audit-summary__card span {
+.audit-summary__content small,
+.audit-summary__content strong,
+.audit-summary__content span {
   display: block;
 }
 
-.audit-summary__card small,
-.audit-summary__card span {
+.audit-summary__content small,
+.audit-summary__content span {
   color: #5c6a82;
 }
 
-.audit-summary__card strong {
+.audit-summary__content strong {
   margin-top: 4px;
   color: #07172f;
   font-size: 28px;
   line-height: 1;
 }
 
-.audit-summary__card span {
+.audit-summary__content span {
   margin-top: 6px;
   font-size: 13px;
 }

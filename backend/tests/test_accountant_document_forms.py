@@ -1016,15 +1016,8 @@ def test_accountant_cost_statement_document_exposes_cell_bound_editable_metadata
 
     assert f'data-accounting-cell="{config.institution_cell}"' in payload["html"]
     assert set(metadata) == {
-        "title",
-        "subtitle",
-        "okudForm",
-        "okudCode",
-        "monthLabel",
-        "yearLabel",
         "reportDate",
         "institution",
-        "structuralUnit",
         "division",
         "targetArticle",
         "expenseType",
@@ -1036,25 +1029,11 @@ def test_accountant_cost_statement_document_exposes_cell_bound_editable_metadata
         "kcsrCode",
         "kvrCode",
         "okeiCode",
-        "preparedByLabel",
         "preparedByName",
-        "checkedByLabel",
         "checkedByName",
     }
-    assert metadata["title"]["value"] == workbook_cell_display_value(sheet, "E6")
-    assert metadata["subtitle"]["value"] == workbook_cell_display_value(sheet, "B7")
-    assert metadata["okudForm"]["value"] == extracted_cell_display_value(
-        sheet,
-        "H7",
-        prefix="Форма ",
-        suffix=" по ОКУД",
-    )
-    assert metadata["okudCode"]["value"] == workbook_cell_display_value(sheet, "I7")
-    assert metadata["monthLabel"]["value"] == workbook_cell_display_value(sheet, config.month_cell)
-    assert metadata["yearLabel"]["value"] == workbook_cell_display_value(sheet, config.year_cell)
     assert metadata["reportDate"]["value"] == workbook_cell_display_value(sheet, config.report_date_cell)
     assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, config.institution_cell)
-    assert metadata["structuralUnit"]["value"] == workbook_cell_display_value(sheet, config.category_cell)
     assert metadata["division"]["value"] == workbook_cell_display_value(sheet, "C11")
     assert metadata["targetArticle"]["value"] == workbook_cell_display_value(sheet, "C12")
     assert metadata["expenseType"]["value"] == workbook_cell_display_value(sheet, "C13")
@@ -1066,9 +1045,7 @@ def test_accountant_cost_statement_document_exposes_cell_bound_editable_metadata
     assert metadata["kcsrCode"]["value"] == workbook_cell_display_value(sheet, "I12")
     assert metadata["kvrCode"]["value"] == workbook_cell_display_value(sheet, "I13")
     assert metadata["okeiCode"]["value"] == workbook_cell_display_value(sheet, "I14")
-    assert metadata["preparedByLabel"]["value"] == workbook_cell_display_value(sheet, f"A{checked_row - 2}")
     assert metadata["preparedByName"]["value"] == workbook_cell_display_value(sheet, config.prepared_by_binding.cell)
-    assert metadata["checkedByLabel"]["value"] == workbook_cell_display_value(sheet, f"A{checked_row}")
     assert metadata["checkedByName"]["value"] == workbook_cell_display_value(sheet, f"E{checked_row}")
 
 
@@ -1113,21 +1090,11 @@ def test_accountant_meal_sheet_document_exposes_editable_metadata(client, app):
     institution_cell = resolve_meal_sheet_institution_cell(sheet, config)
 
     assert set(metadata) == {
-        "title",
-        "monthLabel",
-        "yearLabel",
         "institution",
-        "studentHeader",
-        "priceLabel",
         "preparedByName",
     }
-    assert metadata["title"]["value"] == workbook_cell_display_value(sheet, config.title_cell)
-    assert metadata["monthLabel"]["value"] == workbook_cell_display_value(sheet, config.month_cell)
-    assert metadata["yearLabel"]["value"] == workbook_cell_display_value(sheet, config.year_cell)
     assert metadata["institution"]["cell"] == institution_cell
     assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, institution_cell)
-    assert metadata["studentHeader"]["value"] == workbook_cell_display_value(sheet, config.student_header_cell)
-    assert metadata["priceLabel"]["value"] == workbook_cell_display_value(sheet, config.price_label_cell)
     assert metadata["preparedByName"]["value"] == extracted_cell_display_value(
         sheet,
         config.prepared_by_binding.cell,
@@ -1176,20 +1143,15 @@ def test_accountant_cost_calculation_document_exposes_editable_metadata(client, 
 
     assert set(metadata) == {
         "institution",
-        "title",
-        "subtitle",
-        "categoryLine",
-        "monthLabel",
-        "yearLabel",
+        "dailyCompensationRate",
         "preparedByName",
     }
     assert 'data-accounting-cell="A1"' in payload["html"]
     assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, "A1")
-    assert metadata["title"]["value"] == workbook_cell_display_value(sheet, "A2")
-    assert metadata["subtitle"]["value"] == workbook_cell_display_value(sheet, "A3")
-    assert metadata["categoryLine"]["value"] == workbook_cell_display_value(sheet, config.category_line_cell)
-    assert metadata["monthLabel"]["value"] == workbook_cell_display_value(sheet, config.month_cell)
-    assert metadata["yearLabel"]["value"] == workbook_cell_display_value(sheet, config.year_cell)
+    assert metadata["dailyCompensationRate"]["value"] == workbook_cell_display_value(
+        sheet,
+        config.daily_compensation_rate_cell,
+    )
     assert metadata["preparedByName"]["value"] == extracted_cell_display_value(
         sheet,
         config.prepared_by_binding.cell,

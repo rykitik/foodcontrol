@@ -8,6 +8,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from app.utils.report_generator import russian_month_name
 
+from .metadata_values import parse_decimal_metadata_value
 from .template_config import (
     ColumnWidthContract,
     CostCalculationTemplateConfig,
@@ -134,11 +135,16 @@ def populate_cost_calculation_worksheet(
     worksheet: Worksheet,
     payload: dict,
     config: CostCalculationTemplateConfig,
+    *,
+    custom_values: dict[str, str] | None = None,
 ) -> None:
     _assert_capacity(len(payload["rows"]), config.capacity, "расчета")
     _apply_column_width_contract(worksheet, config.column_width_contract)
 
-    daily_compensation_rate = _numeric_cell_value(worksheet[config.daily_compensation_rate_cell].value)
+    daily_compensation_rate = _daily_compensation_rate(
+        worksheet[config.daily_compensation_rate_cell].value,
+        custom_values,
+    )
     worksheet[config.category_line_cell] = payload["category_line"]
     worksheet[config.month_cell] = russian_month_name(payload["period_start"])
     worksheet[config.year_cell] = _year_label(payload["year"])
@@ -350,6 +356,14 @@ def _numeric_cell_value(value) -> float:
     if isinstance(value, (int, float)):
         return float(value)
     raise ValueError("В шаблоне расчета стоимости питания отсутствует корректный дневной норматив")
+
+
+def _daily_compensation_rate(template_value, custom_values: dict[str, str] | None) -> float:
+    raw_value = (custom_values or {}).get("dailyCompensationRate")
+    if raw_value is not None and str(raw_value).strip():
+        return parse_decimal_metadata_value(raw_value, field_label="Дневной норматив компенсации")
+
+    return _numeric_cell_value(template_value)
 
 
 def _meal_price_label(meal_type: str) -> str:

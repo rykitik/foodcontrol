@@ -98,6 +98,7 @@ def render_worksheet_cell_content_style(cell, *, overflow_direction: str | None)
         styles.append("margin-left:auto")
         styles.append("margin-right:auto")
     elif overflow_direction == "left":
+        styles.append("float:right")
         styles.append("margin-left:auto")
 
     return ";".join(styles)

@@ -131,6 +131,8 @@ def has_blank_overflow_run(
         neighbor = sheet.cell(row=row_index, column=column_index)
         if neighbor.value not in {None, ""}:
             break
+        if _cell_has_visible_border(neighbor) or _cell_has_solid_fill(neighbor):
+            break
 
         found_blank = True
         position += step

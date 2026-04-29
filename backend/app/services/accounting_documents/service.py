@@ -129,6 +129,7 @@ def save_accounting_document_metadata(
         updated_by_user_id=updated_by_user_id,
     )
     merged_values = _merge_metadata_values(global_values, custom_values)
+    workbook, config = _build_template_workbook(payload, custom_values=merged_values)
     apply_document_editable_metadata_overrides(workbook.active, payload, config, merged_values)
     return render_accounting_document(payload, workbook, config, custom_values=merged_values)
 
@@ -156,15 +157,15 @@ def reset_accounting_document_metadata(
 
 
 def _build_document_response(payload: dict) -> dict:
-    workbook, config = _build_template_workbook(payload)
     custom_values = _load_document_metadata_values(payload)
+    workbook, config = _build_template_workbook(payload, custom_values=custom_values)
     apply_document_editable_metadata_overrides(workbook.active, payload, config, custom_values)
     return render_accounting_document(payload, workbook, config, custom_values=custom_values)
 
 
 def _build_workbook_bytes(payload: dict) -> bytes:
-    workbook, config = _build_template_workbook(payload)
     custom_values = _load_document_metadata_values(payload)
+    workbook, config = _build_template_workbook(payload, custom_values=custom_values)
     apply_document_editable_metadata_overrides(workbook.active, payload, config, custom_values)
     return save_workbook_bytes(workbook)
 
@@ -185,14 +186,14 @@ def _merge_metadata_values(global_values: dict[str, str], scoped_values: dict[st
     }
 
 
-def _build_template_workbook(payload: dict):
+def _build_template_workbook(payload: dict, custom_values: dict[str, str] | None = None):
     document_type = payload["document_type"]
     if document_type == "meal_sheet":
         return build_meal_sheet_template_workbook(payload)
     if document_type == "cost_statement":
         return build_cost_statement_template_workbook(payload)
     if document_type == "cost_calculation":
-        return build_cost_calculation_template_workbook(payload)
+        return build_cost_calculation_template_workbook(payload, custom_values=custom_values)
     raise ValueError(f"Unsupported accounting document type: {document_type}")
 
 

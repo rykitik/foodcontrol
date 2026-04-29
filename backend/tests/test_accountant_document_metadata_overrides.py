@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.services.accounting_documents.template_config import (
+    resolve_cost_calculation_template,
     resolve_cost_statement_template,
     resolve_meal_sheet_template,
 )
@@ -309,3 +310,67 @@ def test_accountant_global_metadata_applies_to_preview_and_xlsx(client, app):
     _, sheet = workbook_from_response(workbook_response)
     assert workbook_cell_display_value(sheet, config.institution_cell) == institution
     assert workbook_cell_display_value(sheet, "C15") == funding_source
+
+
+def test_accountant_cost_calculation_daily_compensation_override_recalculates_preview_and_xlsx(client, app):
+    accountant_headers = login(client, "accountant")
+    prepared = prepare_accounting_records(
+        client,
+        app,
+        student_card="210005",
+        category_code="orphan",
+        full_name="Нормативов Павел Сергеевич",
+        group_name="СИР-41",
+        meal_types=("lunch",),
+    )
+    config = resolve_cost_calculation_template("orphan")
+
+    original_response = client.post(
+        "/api/reports/accounting-documents/cost-calculation/document",
+        headers=accountant_headers,
+        json={
+            "month": prepared["month"],
+            "year": prepared["year"],
+            "category_id": prepared["category_id"],
+        },
+    )
+    assert original_response.status_code == 200
+    values = editable_metadata_values(original_response.get_json()["data"])
+    values["dailyCompensationRate"] = "400,50"
+
+    save_response = client.post(
+        "/api/reports/accounting-documents/metadata/save",
+        headers=accountant_headers,
+        json={
+            "document_kind": "cost_calculation",
+            "month": prepared["month"],
+            "year": prepared["year"],
+            "category_id": prepared["category_id"],
+            "values": values,
+        },
+    )
+    assert save_response.status_code == 200
+    saved_payload = save_response.get_json()["data"]
+    saved_metadata = editable_metadata_by_key(saved_payload)
+    assert saved_metadata["dailyCompensationRate"]["value"] == "400,50"
+    assert "400,50" in saved_payload["html"]
+
+    workbook_response = client.post(
+        "/api/reports/accounting-documents/cost-calculation/xlsx",
+        headers=accountant_headers,
+        json={
+            "month": prepared["month"],
+            "year": prepared["year"],
+            "category_id": prepared["category_id"],
+        },
+    )
+    _, sheet = workbook_from_response(workbook_response)
+
+    data_row = config.data_start_row
+    study_days = sheet[f"{config.study_days_column}{data_row}"].value
+    meal_amount = sheet[f"{config.meal_amount_column}{data_row}"].value
+    expected_accrued = round(400.5 * study_days, 2)
+
+    assert workbook_cell_display_value(sheet, config.daily_compensation_rate_cell) == "400,50"
+    assert sheet[f"{config.accrued_amount_column}{data_row}"].value == expected_accrued
+    assert sheet[f"{config.payout_amount_column}{data_row}"].value == round(expected_accrued - meal_amount, 2)
