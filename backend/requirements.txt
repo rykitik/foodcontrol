@@ -1,0 +1,15 @@
+Flask==3.1.2
+Flask-Bcrypt==1.0.1
+Flask-Cors==6.0.1
+Flask-JWT-Extended==4.7.1
+Flask-Migrate==4.1.0
+Flask-SQLAlchemy==3.1.1
+cryptography==44.0.3
+gunicorn==23.0.0
+openpyxl==3.1.5
+pandas==2.3.3
+psycopg2-binary==2.9.11
+python-barcode==0.15.1
+python-dotenv==1.2.1
+SQLAlchemy==2.0.44
+pytest==8.4.2

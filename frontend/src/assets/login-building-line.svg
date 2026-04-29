@@ -1,0 +1,119 @@
+<svg width="1600" height="600" viewBox="0 0 1600 600" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Декоративный контур здания колледжа">
+  <defs>
+    <style>
+      .line{stroke:#8EA0B5;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+      .thin{stroke:#8EA0B5;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;opacity:.72}
+      .soft{stroke:#8EA0B5;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.52}
+    </style>
+  </defs>
+
+  <path class="soft" d="M90 524C210 506 350 504 478 517C590 528 716 522 824 509C978 490 1118 496 1285 514C1386 525 1470 526 1532 516"/>
+  <path class="thin" d="M164 545H1430"/>
+
+  <path class="line" d="M258 494V212L345 164H866L944 212V494"/>
+  <path class="line" d="M315 494V232H884V494"/>
+  <path class="line" d="M345 164L314 232"/>
+  <path class="line" d="M866 164L884 232"/>
+  <path class="line" d="M298 233H902"/>
+  <path class="thin" d="M327 264H872"/>
+  <path class="thin" d="M327 343H872"/>
+  <path class="thin" d="M327 423H872"/>
+
+  <path class="line" d="M250 212H951"/>
+  <path class="thin" d="M268 198H932"/>
+  <path class="thin" d="M374 146H842"/>
+  <path class="thin" d="M397 129H820"/>
+
+  <path class="line" d="M527 494V380H691V494"/>
+  <path class="line" d="M548 494V404H670V494"/>
+  <path class="thin" d="M527 380L558 350H662L691 380"/>
+  <path class="thin" d="M558 350H662"/>
+  <path class="thin" d="M571 494V426H647V494"/>
+  <path class="thin" d="M609 426V494"/>
+  <path class="thin" d="M501 518H717"/>
+  <path class="thin" d="M520 504H698"/>
+  <path class="thin" d="M539 390H679"/>
+
+  <path class="thin" d="M544 386V494"/>
+  <path class="thin" d="M574 386V494"/>
+  <path class="thin" d="M644 386V494"/>
+  <path class="thin" d="M674 386V494"/>
+
+  <g class="thin">
+    <rect x="352" y="263" width="42" height="54" rx="2"/>
+    <rect x="424" y="263" width="42" height="54" rx="2"/>
+    <rect x="352" y="344" width="42" height="54" rx="2"/>
+    <rect x="424" y="344" width="42" height="54" rx="2"/>
+    <rect x="352" y="424" width="42" height="54" rx="2"/>
+    <rect x="424" y="424" width="42" height="54" rx="2"/>
+    <path d="M373 263V317M445 263V317M373 344V398M445 344V398M373 424V478M445 424V478"/>
+    <path d="M352 290H394M424 290H466M352 371H394M424 371H466M352 451H394M424 451H466"/>
+  </g>
+
+  <g class="thin">
+    <rect x="744" y="263" width="42" height="54" rx="2"/>
+    <rect x="816" y="263" width="42" height="54" rx="2"/>
+    <rect x="744" y="344" width="42" height="54" rx="2"/>
+    <rect x="816" y="344" width="42" height="54" rx="2"/>
+    <rect x="744" y="424" width="42" height="54" rx="2"/>
+    <rect x="816" y="424" width="42" height="54" rx="2"/>
+    <path d="M765 263V317M837 263V317M765 344V398M837 344V398M765 424V478M837 424V478"/>
+    <path d="M744 290H786M816 290H858M744 371H786M816 371H858M744 451H786M816 451H858"/>
+  </g>
+
+  <path class="line" d="M170 494V276L258 235"/>
+  <path class="thin" d="M170 276H258"/>
+  <path class="thin" d="M188 306H258"/>
+  <path class="thin" d="M188 384H258"/>
+  <g class="thin">
+    <rect x="190" y="313" width="34" height="50" rx="2"/>
+    <rect x="190" y="394" width="34" height="50" rx="2"/>
+    <rect x="235" y="313" width="24" height="50" rx="2"/>
+    <rect x="235" y="394" width="24" height="50" rx="2"/>
+  </g>
+
+  <path class="line" d="M944 494V224L1230 148L1422 234V494"/>
+  <path class="line" d="M944 224L1230 148"/>
+  <path class="line" d="M1230 148L1422 234"/>
+  <path class="thin" d="M982 252L1242 183L1393 249"/>
+  <path class="thin" d="M982 329L1242 262L1393 326"/>
+  <path class="thin" d="M982 407L1242 340L1393 405"/>
+  <path class="thin" d="M982 494L1242 418L1393 478"/>
+
+  <g class="thin">
+    <path d="M1016 271L1062 259V314L1016 326V271Z"/>
+    <path d="M1102 249L1147 237V292L1102 304V249Z"/>
+    <path d="M1190 226L1232 215V270L1190 281V226Z"/>
+    <path d="M1284 229L1321 244V301L1284 287V229Z"/>
+    <path d="M1355 260L1387 274V331L1355 318V260Z"/>
+    <path d="M1016 349L1062 337V392L1016 405V349Z"/>
+    <path d="M1102 327L1147 315V370L1102 382V327Z"/>
+    <path d="M1190 304L1232 293V348L1190 359V304Z"/>
+    <path d="M1284 307L1321 322V379L1284 365V307Z"/>
+    <path d="M1355 338L1387 352V409L1355 396V338Z"/>
+    <path d="M1016 426L1062 413V468L1016 482V426Z"/>
+    <path d="M1102 404L1147 392V447L1102 459V404Z"/>
+    <path d="M1190 381L1232 370V425L1190 436V381Z"/>
+    <path d="M1284 384L1321 399V456L1284 442V384Z"/>
+    <path d="M1355 415L1387 429V486L1355 473V415Z"/>
+  </g>
+
+  <g class="soft">
+    <path d="M105 494V404"/>
+    <path d="M105 404C78 400 72 365 91 348C74 329 91 303 116 309C123 282 164 284 170 312C198 311 212 345 190 362C207 387 188 417 159 413C148 438 119 431 105 404Z"/>
+    <path d="M105 444C86 431 75 413 72 392"/>
+    <path d="M105 435C129 421 147 398 159 372"/>
+    <path d="M105 421C122 401 128 379 129 352"/>
+  </g>
+
+  <g class="soft">
+    <path d="M1490 494V386"/>
+    <path d="M1490 386C1458 379 1453 339 1479 323C1461 296 1492 268 1518 285C1532 253 1575 268 1570 303C1600 310 1606 348 1579 365C1594 397 1560 421 1534 405C1521 429 1497 418 1490 386Z"/>
+    <path d="M1490 448C1467 426 1459 398 1458 366"/>
+    <path d="M1490 438C1515 417 1533 389 1546 351"/>
+    <path d="M1490 418C1501 396 1506 371 1505 335"/>
+  </g>
+
+  <path class="soft" d="M42 333L92 283H170L220 333V410L170 460H92L42 410V333Z"/>
+  <path class="soft" d="M1424 214L1472 166H1548L1596 214V290L1548 338H1472L1424 290V214Z"/>
+</svg>

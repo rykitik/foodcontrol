@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>preview</title>
+  <style>
+        body { font-family: "Segoe UI", Arial, sans-serif; margin: 10px; color: #111827; }
+        .report-header { margin-bottom: 8px; }
+        .report-header h1 { margin: 0 0 4px; font-size: 20px; }
+        .report-header p { margin: 0; font-size: 13px; }
+        .report-header.report-header-compact { margin-bottom: 1px; }
+        .report-header.report-header-compact h1 { margin: 0; font-size: 10px; line-height: 1.1; font-weight: 700; }
+        .doc-title { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+        .doc-subtitle, .doc-org { text-align: center; margin-bottom: 6px; }
+        .doc-inline-meta { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; font-size: 12px; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        .report-table th, .report-table td { border: 1px solid #111827; padding: 6px; font-size: 13px; vertical-align: top; }
+        .report-table-wide th, .report-table-wide td { padding: 4px; font-size: 11px; }
+        .student-col { min-width: 180px; }
+        .day-col, .day-cell, .day-total { width: 26px; text-align: center; }
+        .day-cell { font-weight: 700; line-height: 1.1; }
+        .totals-row td, .grand-total td { font-weight: 700; }
+        .report-footer { margin-top: 20px; }
+        .totals { margin-top: 10px; font-weight: 700; }
+        .signatures { display: flex; flex-direction: column; gap: 12px; margin-top: 18px; }
+        .signature-line { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+        .ticket-sheet-meta {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 8px;
+          margin: 0;
+          font-size: 7.4px;
+          line-height: 1.2;
+          color: #334155;
+        }
+        .ticket-sheet-meta span:last-child { white-space: nowrap; }
+        .ticket-print-grid {
+          display: grid;
+          gap: 0;
+          margin-top: 0;
+          align-items: start;
+        }
+        .ticket-print-grid + .ticket-print-grid { margin-top: 0; }
+        .ticket-print-grid-triple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .ticket-print-grid-single { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+        .ticket-print-card {
+          border: 0.22px dashed #94a3b8;
+          padding: 0.75mm 0.85mm 0.65mm;
+          break-inside: avoid;
+          page-break-inside: avoid;
+          -webkit-column-break-inside: avoid;
+          box-sizing: border-box;
+          margin: 0;
+          background: #fff;
+          overflow: hidden;
+          min-height: 0;
+        }
+
+        .ticket-print-meta-block {
+          display: grid;
+          gap: 0.35mm;
+          margin-bottom: 0.25mm;
+        }
+        .ticket-print-meta-block-compact { gap: 0.3mm; }
+        .ticket-print-student {
+          margin: 0;
+          font-size: 7.8px;
+          font-weight: 700;
+          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ticket-print-submeta {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 0.55mm;
+          align-items: baseline;
+          font-size: 6.05px;
+          line-height: 1.2;
+          color: #475569;
+        }
+        .ticket-print-submeta-group {
+          min-width: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ticket-print-submeta-period {
+          white-space: nowrap;
+          text-align: right;
+        }
+
+        .ticket-print-card-single-main {
+          display: grid;
+          gap: 0.25mm;
+          padding-top: 0.2mm;
+        }
+        .ticket-print-card-single-head {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 0.5mm;
+          align-items: baseline;
+        }
+        .ticket-print-card-single-title {
+          font-size: 6.9px;
+          font-weight: 700;
+          line-height: 1.15;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ticket-print-card-single-meal {
+          font-size: 5.95px;
+          line-height: 1.15;
+          color: #475569;
+          white-space: nowrap;
+        }
+
+        .ticket-print-card-triple {
+          display: grid;
+          grid-template-columns: 24.5mm minmax(0, 1fr);
+          grid-template-areas:
+            "meta primary"
+            "secondary secondary";
+          column-gap: 0.65mm;
+          row-gap: 0.4mm;
+        }
+        .ticket-print-card-triple .ticket-print-meta-block {
+          grid-area: meta;
+          margin: 0;
+          min-width: 0;
+          align-content: start;
+        }
+        .ticket-print-card-triple .ticket-print-submeta {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 0.1mm;
+        }
+        .ticket-print-card-triple .ticket-print-submeta-period {
+          text-align: left;
+          font-size: 5.75px;
+        }
+
+        .ticket-print-triple-primary {
+          grid-area: primary;
+          display: grid;
+          grid-template-columns: 1.45fr 0.85fr;
+          gap: 0.5mm;
+          align-items: start;
+        }
+        .ticket-print-triple-primary-main .ticket-code-slot-primary {
+          grid-column: auto;
+        }
+
+        .ticket-print-codes {
+          display: grid;
+          gap: 0.32mm;
+        }
+        .ticket-print-triple-secondary {
+          grid-area: secondary;
+          grid-template-columns: 1fr 1fr;
+          column-gap: 0.5mm;
+          row-gap: 0.32mm;
+          align-items: start;
+          padding-top: 0.25mm;
+          border-top: 0.2px solid #e2e8f0;
+        }
+
+        .ticket-code-slot {
+          display: grid;
+          gap: 0.15mm;
+          min-width: 0;
+        }
+        .ticket-code-slot-head {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          gap: 0.5mm;
+          align-items: baseline;
+        }
+        .ticket-code-slot-label {
+          font-size: 6.35px;
+          font-weight: 700;
+          line-height: 1.15;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ticket-code-slot-primary .ticket-code-slot-label { font-weight: 800; }
+        .ticket-code-slot-meal {
+          font-size: 5.55px;
+          line-height: 1.15;
+          color: #475569;
+          white-space: nowrap;
+        }
+        .ticket-code-slot-body {
+          display: grid;
+          gap: 0.12mm;
+          min-width: 0;
+        }
+        .ticket-code-slot-aux .ticket-code-slot-head {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .ticket-code-slot-aux .ticket-code-slot-label {
+          font-size: 5.95px;
+          text-align: left;
+        }
+
+        .ticket-print-barcode-wrap {
+          display: grid;
+          gap: 0.08mm;
+          width: 100%;
+          min-width: 0;
+        }
+        .ticket-print-barcode { width: 100%; }
+        .ticket-print-barcode svg {
+          width: 100%;
+          height: 8.8mm;
+          display: block;
+        }
+        .ticket-print-barcode-single svg { height: 9.35mm; }
+        .ticket-print-triple-primary-main .ticket-print-barcode svg { height: 8.95mm; }
+        .ticket-print-triple-primary-aux .ticket-print-barcode svg { height: 7.25mm; }
+        .ticket-print-triple-secondary .ticket-print-barcode svg { height: 7.35mm; }
+
+        .ticket-print-code {
+          margin: 0;
+          width: 100%;
+          text-align: center;
+          font-family: "Consolas", "Courier New", monospace;
+          font-size: 5.35px;
+          line-height: 1.1;
+          letter-spacing: 0.04em;
+          color: #334155;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .ticket-print-code-single { font-size: 5.55px; }
+
+        @media print {
+          @page { size: A4 portrait; margin: 2.5mm; }
+          body { margin: 0; }
+          .report-header { margin-bottom: 4px; }
+          .report-header h1 { font-size: 16px; margin-bottom: 2px; }
+          .report-header p { font-size: 11px; }
+
+          .ticket-sheet-print .report-header { margin-bottom: 0.6mm; }
+          .ticket-sheet-print .report-header h1 { font-size: 8.3px; margin-bottom: 0; line-height: 1.1; }
+          .ticket-sheet-meta { font-size: 6.9px; margin: 0; }
+          .ticket-print-grid { gap: 0; }
+          .ticket-print-grid-triple { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .ticket-print-grid-single { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+      </style>
+</head>
+<body class="ticket-sheet-print">
+  <div class="report-header report-header-compact"><h1>???? ??????? ?? ??????? | ?????? 2026 ? ?????? 1</h1></div>
+  
+<section class="report-page social-print-page">
+  <div class="ticket-sheet-meta">
+    <span>?????? 2026 ? ?????? 1</span>
+    <span>????????: 2</span>
+  </div>
+  <div class="ticket-print-grid ticket-print-grid-triple">
+<article class="ticket-print-card ticket-print-card-triple">
+  <div class="ticket-print-meta-block ticket-print-meta-block-compact">
+    <div class="ticket-print-student">?????? ?. ?.</div>
+    <div class="ticket-print-submeta">
+      <span class="ticket-print-submeta-group">??-201</span>
+      <span class="ticket-print-submeta-period">01.04.2026 - 26.04.2026</span>
+    </div>
+  </div>
+  <div class="ticket-print-triple-primary">
+    <div class="ticket-print-triple-primary-main">
+      <div class="ticket-code-slot ticket-code-slot-primary">
+        <div class="ticket-code-slot-head">
+          <div class="ticket-code-slot-label">??????? + ????</div>
+          <div class="ticket-code-slot-meal">95.00 ? + 165.00 ?</div>
+        </div>
+        <div class="ticket-code-slot-body">
+          <div class="ticket-print-barcode-wrap">
+            <div class="ticket-print-barcode"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="39.940mm" height="14.000mm">
+    <!--Autogenerated with python-barcode 0.15.1-->
+    <g id="barcode_group">
+        <rect width="100%" height="100%" style="fill:white"/>
+        <rect x="1.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.260mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.920mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.020mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.680mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.000mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.440mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="7.980mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="8.860mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="9.520mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="10.840mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.280mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.720mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="13.700mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="14.360mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="15.020mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.120mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.780mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="17.660mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="18.540mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="19.200mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.080mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.960mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="21.840mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="22.720mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.380mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.820mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.480mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="25.800mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="26.460mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="27.560mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.220mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="29.540mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="30.640mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.740mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="32.180mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.060mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.940mm" y="1.000mm" width="0.880mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.040mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.480mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="36.580mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="37.460mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="37.900mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+    </g>
+</svg>
+</div>
+            <div class="ticket-print-code">TKTM-0QPJ1-R</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ticket-print-triple-primary-aux">
+      <div class="ticket-code-slot ticket-code-slot-aux">
+        <div class="ticket-code-slot-head ticket-code-slot-head-aux">
+          <div class="ticket-code-slot-label">??? ??????</div>
+        </div>
+        <div class="ticket-code-slot-body">
+          <div class="ticket-print-barcode-wrap">
+            <div class="ticket-print-barcode"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="39.940mm" height="14.000mm">
+    <!--Autogenerated with python-barcode 0.15.1-->
+    <g id="barcode_group">
+        <rect width="100%" height="100%" style="fill:white"/>
+        <rect x="1.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.260mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.920mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.020mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.680mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.000mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.440mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="7.980mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="8.860mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="9.520mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="10.840mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.280mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.720mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="13.700mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="14.360mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="15.020mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.120mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.780mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="17.660mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="18.540mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="19.200mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.080mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.960mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="21.840mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="22.720mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.380mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.820mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.480mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="25.800mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="26.460mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="27.560mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.220mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="29.540mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="30.640mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.740mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="32.180mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.060mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.940mm" y="1.000mm" width="0.880mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.040mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.480mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="36.580mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="37.460mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="37.900mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+    </g>
+</svg>
+</div>
+            <div class="ticket-print-code">TKTM-0QPJ1-R</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ticket-print-codes ticket-print-triple-secondary">
+    <div class="ticket-code-slot">
+      <div class="ticket-code-slot-head">
+        <div class="ticket-code-slot-label">???????</div>
+        <div class="ticket-code-slot-meal">95.00 ?</div>
+      </div>
+      <div class="ticket-code-slot-body">
+        <div class="ticket-print-barcode-wrap">
+          <div class="ticket-print-barcode"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="35.100mm" height="14.000mm">
+    <!--Autogenerated with python-barcode 0.15.1-->
+    <g id="barcode_group">
+        <rect width="100%" height="100%" style="fill:white"/>
+        <rect x="1.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.260mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.920mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.020mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.680mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.000mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.440mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="7.980mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="8.860mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="9.520mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="10.840mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.280mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.160mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="13.700mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="14.360mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="15.020mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.120mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.780mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="17.660mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="18.540mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="18.980mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="19.860mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.960mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="21.840mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="22.280mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.380mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.040mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.700mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="25.800mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="26.680mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="27.340mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.220mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="29.320mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="30.200mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="30.640mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.740mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="32.620mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.060mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+    </g>
+</svg>
+</div>
+          <div class="ticket-print-code">TKTB-QM3-4</div>
+        </div>
+      </div>
+    </div>
+    <div class="ticket-code-slot">
+      <div class="ticket-code-slot-head">
+        <div class="ticket-code-slot-label">????</div>
+        <div class="ticket-code-slot-meal">165.00 ?</div>
+      </div>
+      <div class="ticket-code-slot-body">
+        <div class="ticket-print-barcode-wrap">
+          <div class="ticket-print-barcode"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="37.520mm" height="14.000mm">
+    <!--Autogenerated with python-barcode 0.15.1-->
+    <g id="barcode_group">
+        <rect width="100%" height="100%" style="fill:white"/>
+        <rect x="1.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.260mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.920mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.020mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.680mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.000mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.440mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="7.980mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="8.860mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="9.520mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="10.840mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.280mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.160mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.820mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="13.700mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="14.360mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="15.020mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.120mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="17.220mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="17.660mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="18.540mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="19.860mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.300mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.960mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="22.060mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="22.500mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.380mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.820mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.480mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="25.800mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="26.460mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="27.120mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.220mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.880mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="29.980mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="30.640mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.520mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.960mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.060mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="34.160mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.040mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.480mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+    </g>
+</svg>
+</div>
+          <div class="ticket-print-code">TKTL-9XRJ-5</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+</div>
+  <div class="ticket-print-grid ticket-print-grid-single">
+<article class="ticket-print-card ticket-print-card-single">
+  <div class="ticket-print-meta-block ticket-print-meta-block-compact">
+    <div class="ticket-print-student">?????? ?. ?.</div>
+    <div class="ticket-print-submeta">
+      <span class="ticket-print-submeta-group">???-302</span>
+      <span class="ticket-print-submeta-period">01.04.2026 - 26.04.2026</span>
+    </div>
+  </div>
+  <div class="ticket-print-card-single-main">
+    <div class="ticket-print-card-single-head">
+      <div class="ticket-print-card-single-title">????</div>
+      <div class="ticket-print-card-single-meal">175.00 ?</div>
+    </div>
+    <div class="ticket-print-barcode-wrap">
+      <div class="ticket-print-barcode ticket-print-barcode-single"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="42.360mm" height="14.000mm">
+    <!--Autogenerated with python-barcode 0.15.1-->
+    <g id="barcode_group">
+        <rect width="100%" height="100%" style="fill:white"/>
+        <rect x="1.600mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.260mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="2.920mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.020mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="4.680mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.000mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.440mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="6.880mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="7.980mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="8.860mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="9.520mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="10.840mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="11.280mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.160mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="12.820mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="13.700mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="14.360mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="15.020mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.120mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="16.780mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="17.660mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="18.540mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="19.640mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.520mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="20.960mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="21.400mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="22.720mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="23.380mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.040mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="24.920mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="25.800mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="26.680mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="27.340mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="28.220mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="29.100mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="29.760mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="30.640mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.300mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="31.960mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.060mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="33.500mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="34.600mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="35.480mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="36.580mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="37.240mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="37.900mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+        <rect x="39.000mm" y="1.000mm" width="0.660mm" height="12.000mm" style="fill:black;"/>
+        <rect x="39.880mm" y="1.000mm" width="0.220mm" height="12.000mm" style="fill:black;"/>
+        <rect x="40.320mm" y="1.000mm" width="0.440mm" height="12.000mm" style="fill:black;"/>
+    </g>
+</svg>
+</div>
+      <div class="ticket-print-code ticket-print-code-single">TKTL-SINGLE-K</div>
+    </div>
+  </div>
+</article>
+</div>
+</section>
+
+</body>
+</html>

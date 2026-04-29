@@ -1,0 +1,64 @@
+services:
+  postgres:
+    image: ${FOODCONTROL_POSTGRES_BASE_IMAGE:-mirror.gcr.io/library/postgres:15-alpine}
+    environment:
+      POSTGRES_DB: foodcontrol
+      POSTGRES_USER: foodcontrol_user
+      POSTGRES_PASSWORD: secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foodcontrol_user -d foodcontrol"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        PYTHON_BASE_IMAGE: ${FOODCONTROL_BACKEND_BASE_IMAGE:-mirror.gcr.io/library/python:3.12-slim}
+    working_dir: /app
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 5000
+      DATABASE_URL: postgresql://foodcontrol_user:secure_password@postgres:5432/foodcontrol
+      DEMO_USER_PASSWORD: password123
+      OFFLINE_GRANT_ALLOW_EPHEMERAL_DEV_KEY: "1"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NODE_BASE_IMAGE: ${FOODCONTROL_FRONTEND_BASE_IMAGE:-mirror.gcr.io/library/node:20-alpine}
+    working_dir: /app
+    environment:
+      VITE_DEV_HOST: 0.0.0.0
+      VITE_DEV_PORT: 5173
+      VITE_API_URL: /api
+      VITE_PROXY_TARGET: http://backend:5000
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  frontend_node_modules:

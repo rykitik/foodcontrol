@@ -1,0 +1,234 @@
+# =================================
+# Общие системные файлы
+# =================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# =================================
+# Python
+# =================================
+# Виртуальное окружение
+backend/venv/
+backend/env/
+backend/ENV/
+backend/.venv
+
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Распределения / упаковка
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# =================================
+# Node.js / Vue.js
+# =================================
+frontend/node_modules/
+frontend/node/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.npm/
+frontend/.yarn/
+frontend/.yarnrc
+
+# Логи
+frontend/*.log
+
+# Файлы окружения
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# Сборка
+frontend/dist/
+frontend/dev-dist/
+frontend/build/
+
+# Coverage directory used by tools like istanbul
+frontend/coverage/
+frontend/.nyc_output
+
+# IDEs
+frontend/.vscode/
+frontend/.idea/
+frontend/*.swp
+frontend/*.swo
+
+# OS
+frontend/.DS_Store
+
+# =================================
+# Базы данных
+# =================================
+*.db
+*.sqlite
+*.sqlite3
+backend/instance/
+
+# PostgreSQL
+backend/*.psql
+backend/pgdata/
+
+# =================================
+# Flask специфичные файлы
+# =================================
+# Файлы сессий
+backend/*.session
+
+# Файлы кэша
+backend/.cache/
+
+# Логи приложения
+backend/*.log
+backend/logs/
+
+# Временные файлы
+backend/tmp/
+backend/temp/
+
+# =================================
+# Конфигурационные файлы (добавлять с осторожностью)
+# =================================
+# backend/config.py  # Раскомментировать если храните секреты в config.py
+# backend/.env       # Раскомментировать если используете .env файлы
+
+# =================================
+# Документация
+# =================================
+docs/_build/
+output/playwright/
+.playwright-cli/
+
+# =================================
+# Резервные копии
+# =================================
+*.bak
+*.backup
+*.old
+
+# =================================
+# Прочие
+# =================================
+# Файлы лицензий/сертификатов (если не должны быть публичными)
+*.key
+*.pem
+*.crt
+*.cer
+
+# Файлы дампов
+*.dump
+*.sql.gz
+# Local diagnostic/tooling dumps (must never be versioned)
+.codex_diag/
+.codex_diag/**
+
+# Local archives/dumps
+*.zip
+*.7z
+*.rar
+
+# Local Codex and temp artifacts
+.codex/
+output/
+node_modules/
+%TEMP%install-qwen.bat
