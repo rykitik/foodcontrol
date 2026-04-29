@@ -42,9 +42,6 @@ onBeforeUnmount(() => {
   }
 })
 
-const summaryPoints = ['Итоги дня', 'Суммы', 'Категории']
-const journalPoints = ['Очередь', 'Проверка', 'История']
-
 const networkTone = computed(() => (stats.value ? 'success' : 'warn'))
 const networkLabel = computed(() => (stats.value ? 'Интернет доступен' : 'Интернет недоступен'))
 
@@ -95,6 +92,20 @@ const lastSyncLabel = computed(() => {
     minute: '2-digit',
   }).format(new Date(currentTimestamp.value - snapshotAgeMs.value))
 })
+
+const formattedTodayAmount = computed(() =>
+  new Intl.NumberFormat('ru-RU', {
+    maximumFractionDigits: 0,
+  }).format(stats.value?.costToday ?? 0),
+)
+
+const summaryMetricsLabel = computed(
+  () => `Выдач: ${stats.value?.mealsToday ?? 0} · Сумма: ${formattedTodayAmount.value} ₽`,
+)
+
+const journalMetricsLabel = computed(
+  () => `На проверке: ${needsReviewCount.value} · Очередь: ${queueCount.value}`,
+)
 </script>
 
 <template>
@@ -190,9 +201,7 @@ const lastSyncLabel = computed(() => {
           <p>{{ summaryCardSubtitle }}</p>
           <small v-if="summaryCardNote">{{ summaryCardNote }}</small>
 
-          <div class="cashier-section-tags" aria-label="Разделы сводки">
-            <span v-for="point in summaryPoints" :key="point">{{ point }}</span>
-          </div>
+          <p class="cashier-section-metrics">{{ summaryMetricsLabel }}</p>
 
           <span class="cashier-menu-button outline">
             <AppIcon name="reports" />
@@ -214,9 +223,7 @@ const lastSyncLabel = computed(() => {
           <h2>Журнал</h2>
           <p>Операции и оффлайн-контроль</p>
 
-          <div class="cashier-section-tags" aria-label="Разделы журнала">
-            <span v-for="point in journalPoints" :key="point">{{ point }}</span>
-          </div>
+          <p class="cashier-section-metrics">{{ journalMetricsLabel }}</p>
 
           <span class="cashier-menu-button outline">
             <AppIcon name="document" />
@@ -248,7 +255,7 @@ const lastSyncLabel = computed(() => {
   min-height: calc(100dvh - 122px);
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .cashier-menu-hero,
@@ -263,14 +270,12 @@ const lastSyncLabel = computed(() => {
 .cashier-menu-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 18px;
-  padding: 28px 30px;
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 8% 18%, rgba(37, 99, 235, 0.09), transparent 32%),
-    radial-gradient(circle at 100% 0%, rgba(16, 185, 129, 0.13), transparent 34%),
-    linear-gradient(180deg, #f7fbff 0%, #f2f8f7 100%);
+  align-items: center;
+  gap: 24px;
+  min-height: 118px;
+  padding: 24px 32px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f4faf8 100%);
 }
 
 .cashier-menu-hero-copy {
@@ -278,9 +283,9 @@ const lastSyncLabel = computed(() => {
 }
 
 .cashier-menu-eyebrow {
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   color: #2563eb;
-  font-size: 0.9rem;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -289,29 +294,25 @@ const lastSyncLabel = computed(() => {
 .cashier-menu-title-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
+  align-items: flex-end;
+  gap: 10px 16px;
 }
 
 .cashier-menu-title-row h1 {
   margin: 0;
   color: #07172f;
-  font-size: clamp(2.1rem, 3.5vw, 3.35rem);
+  font-size: 38px;
   font-weight: 800;
-  line-height: 1;
-  letter-spacing: -0.045em;
+  line-height: 1.05;
+  letter-spacing: 0;
 }
 
 .cashier-menu-building {
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
-  padding: 0 18px;
-  border: 1px solid #d7e1ee;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.82);
+  min-height: 28px;
   color: #52617a;
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 700;
 }
 
@@ -319,21 +320,21 @@ const lastSyncLabel = computed(() => {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 12px;
-  max-width: 800px;
+  gap: 10px;
+  max-width: 640px;
 }
 
 .cashier-status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  min-height: 54px;
-  padding: 0 18px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
   border: 1px solid #d7e1ee;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.82);
   color: #24324a;
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -383,24 +384,11 @@ const lastSyncLabel = computed(() => {
 }
 
 .cashier-status-dot {
-  width: 20px;
-  height: 20px;
+  width: 10px;
+  height: 10px;
   flex: 0 0 auto;
   border-radius: 999px;
   background: currentColor;
-  position: relative;
-}
-
-.cashier-status-dot::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 4px;
-  width: 6px;
-  height: 10px;
-  border-right: 2px solid #fff;
-  border-bottom: 2px solid #fff;
-  transform: rotate(40deg);
 }
 
 .cashier-menu-banner {
@@ -438,11 +426,11 @@ const lastSyncLabel = computed(() => {
 
 .cashier-terminal-card {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr);
   align-items: center;
-  gap: 34px;
-  min-height: 260px;
-  padding: 32px 54px;
+  gap: 28px;
+  min-height: 224px;
+  padding: 28px 32px;
   border-radius: 20px;
 }
 
@@ -454,7 +442,7 @@ const lastSyncLabel = computed(() => {
 
 .cashier-terminal-visual img {
   display: block;
-  width: min(230px, 100%);
+  width: min(184px, 100%);
   height: auto;
 }
 
@@ -467,51 +455,51 @@ const lastSyncLabel = computed(() => {
   margin: 0;
   color: #07172f;
   font-weight: 800;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
 }
 
 .cashier-terminal-content h2 {
-  font-size: 2.2rem;
+  font-size: 34px;
   line-height: 1.05;
 }
 
 .cashier-terminal-content p,
 .cashier-section-body p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: #65738c;
-  font-size: 1.08rem;
+  font-size: 16px;
   font-weight: 500;
 }
 
 .cashier-terminal-ready {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 22px;
+  gap: 8px;
+  margin-top: 16px;
   color: #087443;
-  font-size: 1rem;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .cashier-terminal-actions {
   display: grid;
-  grid-template-columns: minmax(250px, 360px) minmax(190px, 265px) minmax(210px, 285px);
-  gap: 20px;
-  margin-top: 22px;
+  grid-template-columns: minmax(230px, 330px) minmax(170px, 230px) minmax(190px, 250px);
+  gap: 14px;
+  margin-top: 18px;
 }
 
 .cashier-menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 60px;
-  padding: 0 24px;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 20px;
   border: 1px solid #c8d5e7;
   border-radius: 10px;
   background: #fff;
   color: #0c2344;
-  font-size: 1.1rem;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1;
   text-align: center;
@@ -537,12 +525,14 @@ const lastSyncLabel = computed(() => {
 
 .cashier-menu-button.secondary {
   background: #fff;
+  border-color: #cbd7e7;
+  color: #17345f;
 }
 
 .cashier-menu-button.outline {
   width: 100%;
-  min-height: 58px;
-  margin-top: 20px;
+  min-height: 46px;
+  margin-top: 16px;
   border-color: #14376d;
   background: #fff;
   color: #1f3f72;
@@ -560,17 +550,17 @@ const lastSyncLabel = computed(() => {
 .cashier-section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: 16px;
 }
 
 .cashier-section-card {
   position: relative;
   display: grid;
-  grid-template-columns: 155px minmax(0, 1fr);
+  grid-template-columns: 92px minmax(0, 1fr);
   align-items: center;
-  gap: 30px;
-  min-height: 230px;
-  padding: 30px 38px;
+  gap: 20px;
+  min-height: 164px;
+  padding: 22px 28px;
   border-radius: 20px;
   color: inherit;
   overflow: hidden;
@@ -603,8 +593,8 @@ const lastSyncLabel = computed(() => {
 
 .cashier-section-arrow {
   position: absolute;
-  top: 38px;
-  right: 40px;
+  top: 24px;
+  right: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -612,32 +602,32 @@ const lastSyncLabel = computed(() => {
 }
 
 .cashier-section-media {
-  width: 118px;
-  height: 118px;
+  width: 78px;
+  height: 78px;
   display: grid;
   place-items: center;
   align-self: start;
   border: 1px solid #dbe5f1;
-  border-radius: 18px;
+  border-radius: 14px;
   background: #f4f8fd;
   overflow: hidden;
 }
 
 .cashier-section-media img {
   display: block;
-  width: 120px;
+  width: 80px;
   max-width: none;
-  height: 120px;
+  height: 80px;
   object-fit: cover;
 }
 
 .cashier-section-body {
   min-width: 0;
-  padding-right: 42px;
+  padding-right: 36px;
 }
 
 .cashier-section-body h2 {
-  font-size: 1.72rem;
+  font-size: 25px;
   line-height: 1.1;
 }
 
@@ -648,32 +638,18 @@ const lastSyncLabel = computed(() => {
   font-weight: 700;
 }
 
-.cashier-section-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.cashier-section-tags span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 0 18px;
-  border: 1px solid #d9e3ef;
-  border-radius: 8px;
-  background: #f8fafc;
-  color: #596981;
-  font-size: 0.95rem;
-  font-weight: 700;
+.cashier-section-metrics {
+  color: #334155;
+  font-size: 15px;
+  font-weight: 800;
 }
 
 .cashier-status-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  min-height: 64px;
-  border-radius: 18px;
+  min-height: 48px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -681,11 +657,11 @@ const lastSyncLabel = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  min-height: 64px;
-  padding: 0 20px;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
   color: #5c6b83;
-  font-size: 1rem;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -722,7 +698,7 @@ const lastSyncLabel = computed(() => {
   }
 }
 
-@media (max-width: 1380px) {
+@media (max-width: 1180px) {
   .cashier-menu-hero {
     grid-template-columns: 1fr;
     align-items: start;
@@ -749,7 +725,7 @@ const lastSyncLabel = computed(() => {
   }
 
   .cashier-section-card {
-    min-height: 210px;
+    min-height: 156px;
   }
 
   .cashier-status-strip {
@@ -798,7 +774,7 @@ const lastSyncLabel = computed(() => {
   }
 
   .cashier-terminal-visual img {
-    width: min(210px, 70vw);
+    width: min(184px, 70vw);
   }
 
   .cashier-terminal-actions {

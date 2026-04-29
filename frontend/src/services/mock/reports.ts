@@ -1,4 +1,5 @@
 import type {
+  AccountingCombinedMealSheetRequest,
   AccountingCostCalculationRequest,
   AccountingCostStatementRequest,
   AccountingDocumentGlobalMetadataResetRequest,
@@ -95,6 +96,61 @@ export function downloadAccountingMealSheetXlsx(
 ): Blob {
   requireUser(token)
   return new Blob([`Meal sheet ${request.category_id} ${request.meal_type}`], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+}
+
+export function getAccountingCombinedMealSheetDocument(
+  request: AccountingCombinedMealSheetRequest,
+  token?: string | null,
+): PrintableDocument {
+  requireUser(token)
+  return {
+    title: 'Табель учета питания (общий)',
+    subtitle: `за ${String(request.month).padStart(2, '0')}.${request.year}`,
+    print_mode: 'embedded',
+    page_orientation: 'landscape',
+    html: `
+      <section class="accounting-form-page accounting-form-page-landscape">
+        <div class="accounting-form accounting-form-meal-sheet">
+          <div class="accounting-form-head">
+            <div class="accounting-form-title">Табель учета питания (общий)</div>
+            <div class="accounting-form-period">З - завтрак, О - обед</div>
+          </div>
+          <table class="accounting-grid accounting-grid-meal-sheet">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Студент</th>
+                <th>1</th>
+                <th>Завтрак</th>
+                <th>Обед</th>
+                <th>Сумма</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1</td>
+                <td>Mock студент</td>
+                <td class="accounting-day-cell">З/О</td>
+                <td>1</td>
+                <td>1</td>
+                <td>260.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `.trim(),
+  }
+}
+
+export function downloadAccountingCombinedMealSheetXlsx(
+  request: AccountingCombinedMealSheetRequest,
+  token?: string | null,
+): Blob {
+  requireUser(token)
+  return new Blob([`Combined meal sheet ${request.category_id}`], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
 }
@@ -268,6 +324,17 @@ function resolveMockAccountingDocument(
         year: request.year,
         category_id: request.category_id,
         meal_type: request.meal_type ?? 'breakfast',
+      },
+      token,
+    )
+  }
+
+  if (request.document_kind === 'combined_meal_sheet') {
+    return getAccountingCombinedMealSheetDocument(
+      {
+        month: request.month,
+        year: request.year,
+        category_id: request.category_id,
       },
       token,
     )

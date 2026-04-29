@@ -27,6 +27,15 @@ export function hasAccountingMealSheetTemplate(
   return getAccountingMealSheetTemplates(category).includes(mealType)
 }
 
+export function hasAccountingCombinedMealSheetTemplate(category: Category | undefined | null): boolean {
+  return getAccountingMealSheetTemplates(category).length > 1
+}
+
+export function hasAnyAccountingCombinedMealSheetTemplate(categories: Category[]): boolean {
+  const mealTypes = new Set(categories.flatMap((category) => getAccountingMealSheetTemplates(category)))
+  return mealTypes.has('breakfast') && mealTypes.has('lunch')
+}
+
 export function getAccountingMealSheetTemplates(category: Category | undefined | null): MealType[] {
   return resolveCategoryMealTypes(category)
 }
@@ -35,6 +44,7 @@ export function hasAnyAccountingTemplate(category?: Category | null): boolean {
   return (
     hasAccountingCostStatementTemplate(category) ||
     hasAccountingCostCalculationTemplate(category) ||
+    hasAccountingCombinedMealSheetTemplate(category) ||
     getAccountingMealSheetTemplates(category).length > 0
   )
 }

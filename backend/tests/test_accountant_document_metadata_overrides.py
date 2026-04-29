@@ -179,6 +179,65 @@ def test_accountant_meal_sheet_shared_metadata_overrides_apply_for_all_users(cli
     assert prepared_by_cell_text(sheet, binding=config.prepared_by_binding) == "Бухгалтер ___________________Единый бухгалтер"
 
 
+def test_accountant_combined_meal_sheet_metadata_overrides_apply_to_preview_and_xlsx(client, app):
+    accountant_headers = login(client, "accountant")
+    prepared = prepare_accounting_records(
+        client,
+        app,
+        student_card="210090",
+        category_code="ovz",
+        full_name="Общий Реквизитов Студент",
+        group_name="ОБЩ-31",
+        meal_types=("breakfast", "lunch"),
+    )
+
+    original_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/document",
+        headers=accountant_headers,
+        json={
+            "month": prepared["month"],
+            "year": prepared["year"],
+            "category_id": prepared["category_id"],
+        },
+    )
+    assert original_response.status_code == 200
+    values = editable_metadata_values(original_response.get_json()["data"])
+    values["institution"] = "Единая бухгалтерия колледжа"
+    values["preparedByName"] = "Иванова И. И."
+
+    save_response = client.post(
+        "/api/reports/accounting-documents/metadata/save",
+        headers=accountant_headers,
+        json={
+            "document_kind": "combined_meal_sheet",
+            "month": prepared["month"],
+            "year": prepared["year"],
+            "category_id": prepared["category_id"],
+            "values": values,
+        },
+    )
+    assert save_response.status_code == 200
+    saved_payload = save_response.get_json()["data"]
+    saved_metadata = editable_metadata_by_key(saved_payload)
+    assert saved_metadata["institution"]["value"] == "Единая бухгалтерия колледжа"
+    assert saved_metadata["preparedByName"]["value"] == "Иванова И. И."
+    assert "Единая бухгалтерия колледжа" in saved_payload["html"]
+    assert "Иванова И. И." in saved_payload["html"]
+
+    workbook_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/xlsx",
+        headers=accountant_headers,
+        json={
+            "month": prepared["month"],
+            "year": prepared["year"],
+            "category_id": prepared["category_id"],
+        },
+    )
+    _, sheet = workbook_from_response(workbook_response)
+    assert workbook_cell_display_value(sheet, "A1") == "Единая бухгалтерия колледжа"
+    assert "Иванова И. И." in workbook_cell_display_value(sheet, f"A{sheet.max_row}")
+
+
 def test_accountant_document_metadata_reset_restores_system_values(client, app):
     accountant_headers = login(client, "accountant")
     prepared = prepare_accounting_records(

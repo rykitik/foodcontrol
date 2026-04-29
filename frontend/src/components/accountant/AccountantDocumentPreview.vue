@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import AppIcon from '@/components/icons/AppIcon.vue'
 import type { AppIconName } from '@/components/icons/appIconRegistry'
@@ -27,6 +27,8 @@ defineEmits<{
   excel: []
   toggleMetadata: []
 }>()
+
+const isFullscreenOpen = ref(false)
 
 const previewStateLabel = computed(() => {
   if (props.loading) {
@@ -73,6 +75,20 @@ const infoChips = computed(() =>
       : null,
   ].filter((item): item is NonNullable<typeof item> => Boolean(item)),
 )
+
+const emptyDocumentTitle = 'Документ не выбран'
+
+function openFullscreen() {
+  if (!props.preview) {
+    return
+  }
+
+  isFullscreenOpen.value = true
+}
+
+function closeFullscreen() {
+  isFullscreenOpen.value = false
+}
 </script>
 
 <template>
@@ -149,11 +165,15 @@ const infoChips = computed(() =>
 
     <section class="accountant-preview-card__stage" data-testid="accountant-preview-stage-shell">
       <AccountantDocumentPreviewStage
-        :document-title="document?.title ?? 'Документ не выбран'"
+        :document-title="document?.title ?? emptyDocumentTitle"
         :preview="preview"
         :loading="loading"
         :metadata-status="metadataStatus"
         :frame-key="document?.key"
+        expandable
+        :is-fullscreen="isFullscreenOpen"
+        @open-fullscreen="openFullscreen"
+        @close-fullscreen="closeFullscreen"
       />
     </section>
   </article>

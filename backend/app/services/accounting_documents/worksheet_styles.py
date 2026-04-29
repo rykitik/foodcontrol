@@ -92,13 +92,13 @@ def render_worksheet_cell_content_style(cell, *, overflow_direction: str | None)
         "max-width:none",
         "min-width:100%",
         "white-space:inherit",
+        "text-align:inherit",
     ]
 
     if horizontal in {"center", "centerContinuous"}:
         styles.append("margin-left:auto")
         styles.append("margin-right:auto")
-    elif overflow_direction == "left":
-        styles.append("float:right")
+    elif overflow_direction == "left" or horizontal == "right":
         styles.append("margin-left:auto")
 
     return ";".join(styles)

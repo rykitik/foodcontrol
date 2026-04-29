@@ -7,6 +7,8 @@ from flask import Blueprint, jsonify, request, send_file
 
 from app.auth import ensure_building_access, login_required
 from app.services.accounting_documents import (
+    build_combined_meal_sheet_document,
+    build_combined_meal_sheet_workbook_bytes,
     build_cost_calculation_document,
     build_cost_calculation_workbook_bytes,
     build_cost_statement_document,
@@ -143,8 +145,8 @@ def parse_accounting_document_runtime(payload: dict, current_user, *, require_me
 
 def parse_accounting_document_metadata_runtime(payload: dict, current_user):
     document_kind = payload.get("document_kind")
-    if document_kind not in {"meal_sheet", "cost_statement", "cost_calculation"}:
-        return None, (jsonify({"error": "document_kind должен быть meal_sheet, cost_statement или cost_calculation"}), 400)
+    if document_kind not in {"meal_sheet", "combined_meal_sheet", "cost_statement", "cost_calculation"}:
+        return None, (jsonify({"error": "document_kind должен быть meal_sheet, combined_meal_sheet, cost_statement или cost_calculation"}), 400)
 
     parsed, error = parse_accounting_document_runtime(payload, current_user, require_meal_type=document_kind == "meal_sheet")
     if error:
@@ -223,6 +225,49 @@ def accountant_meal_sheet_xlsx(current_user):
 
     try:
         workbook_bytes, filename = build_meal_sheet_workbook_bytes(**parsed)
+    except LookupError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    log_accounting_document_action(current_user, "export_accounting_document_xlsx", parsed)
+    return send_file(
+        BytesIO(workbook_bytes),
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@reports_bp.post("/accounting-documents/combined-meal-sheet/document")
+@login_required(roles=["accountant", "head_social", "admin"])
+def accountant_combined_meal_sheet_document(current_user):
+    payload = request.get_json(silent=True) or {}
+    parsed, error = parse_accounting_document_runtime(payload, current_user)
+    if error:
+        return error
+
+    try:
+        document = build_combined_meal_sheet_document(**parsed)
+    except LookupError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    log_accounting_document_action(current_user, "generate_accounting_document", parsed)
+    return jsonify({"data": document})
+
+
+@reports_bp.post("/accounting-documents/combined-meal-sheet/xlsx")
+@login_required(roles=["accountant", "head_social", "admin"])
+def accountant_combined_meal_sheet_xlsx(current_user):
+    payload = request.get_json(silent=True) or {}
+    parsed, error = parse_accounting_document_runtime(payload, current_user)
+    if error:
+        return error
+
+    try:
+        workbook_bytes, filename = build_combined_meal_sheet_workbook_bytes(**parsed)
     except LookupError as exc:
         return jsonify({"error": str(exc)}), 404
     except ValueError as exc:

@@ -1,4 +1,5 @@
 import type {
+  AccountingCombinedMealSheetRequest,
   AccountingCostCalculationRequest,
   AccountingCostStatementRequest,
   AccountingDocumentGlobalMetadataResetRequest,
@@ -60,6 +61,39 @@ export async function downloadAccountingMealSheetXlsx(
       body: JSON.stringify(request),
     },
     () => mock.downloadAccountingMealSheetXlsx(request, token),
+  )
+}
+
+export async function getAccountingCombinedMealSheetDocument(
+  request: AccountingCombinedMealSheetRequest,
+  token?: string | null,
+): Promise<PrintableDocument> {
+  return requestJson(
+    '/reports/accounting-documents/combined-meal-sheet/document',
+    {
+      method: 'POST',
+      headers: authHeaders(token),
+      body: JSON.stringify(request),
+    },
+    () => mock.getAccountingCombinedMealSheetDocument(request, token),
+  )
+}
+
+export async function downloadAccountingCombinedMealSheetXlsx(
+  request: AccountingCombinedMealSheetRequest,
+  token?: string | null,
+): Promise<Blob> {
+  return requestBlob(
+    '/reports/accounting-documents/combined-meal-sheet/xlsx',
+    {
+      method: 'POST',
+      headers: {
+        ...authHeaders(token),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    },
+    () => mock.downloadAccountingCombinedMealSheetXlsx(request, token),
   )
 }
 

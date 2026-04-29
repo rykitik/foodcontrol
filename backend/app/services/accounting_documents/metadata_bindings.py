@@ -38,6 +38,8 @@ def resolve_document_editable_metadata_bindings(
     document_type = payload.get("document_type")
     if document_type == "meal_sheet":
         return _meal_sheet_bindings(worksheet, config)
+    if document_type == "combined_meal_sheet":
+        return _combined_meal_sheet_bindings(config)
     if document_type == "cost_statement":
         return _cost_statement_bindings(config)
     if document_type == "cost_calculation":
@@ -106,6 +108,24 @@ def _meal_sheet_bindings(
     institution_cell = resolve_meal_sheet_institution_cell(worksheet, config)
     bindings = [
         EditableMetadataBinding("institution", "Учреждение", "Организация", institution_cell),
+    ]
+
+    if config.prepared_by_binding is not None:
+        bindings.append(
+            _prepared_by_binding_to_metadata(
+                key="preparedByName",
+                label="ФИО бухгалтера",
+                section="Подписи",
+                binding=config.prepared_by_binding,
+            )
+        )
+
+    return bindings
+
+
+def _combined_meal_sheet_bindings(config) -> list[EditableMetadataBinding]:
+    bindings = [
+        EditableMetadataBinding("institution", "Учреждение", "Организация", config.institution_cell),
     ]
 
     if config.prepared_by_binding is not None:

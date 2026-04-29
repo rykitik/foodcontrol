@@ -354,9 +354,37 @@ export function useAccountantPreviewFrame(preview: Ref<PrintableDocument | null>
 }
 
 function normalizePreviewDocument(doc: Document) {
+  ensurePreviewDocumentChrome(doc)
   doc.documentElement.style.overflow = 'hidden'
   doc.body.style.overflow = 'hidden'
   doc.body.style.background = '#ffffff'
+}
+
+function ensurePreviewDocumentChrome(doc: Document) {
+  if (doc.getElementById('accountant-preview-screen-style')) {
+    return
+  }
+
+  const style = doc.createElement('style')
+  style.id = 'accountant-preview-screen-style'
+  style.textContent = `
+    @media screen {
+      html,
+      body {
+        background: #eef2f7 !important;
+      }
+
+      body.embedded-print-body {
+        margin: 0 !important;
+        padding: 14px !important;
+      }
+
+      body.embedded-print-body .accounting-worksheet-page {
+        padding: 10px !important;
+      }
+    }
+  `
+  doc.head.append(style)
 }
 
 async function waitForFrameFonts(doc: Document | null): Promise<void> {

@@ -4,8 +4,10 @@ import {
   ACCOUNTING_ALL_CATEGORIES_ID,
   getAccountingDocumentCategories,
   getAccountingMealSheetTemplates,
+  hasAccountingCombinedMealSheetTemplate,
   hasAccountingCostCalculationTemplate,
   hasAccountingCostStatementTemplate,
+  hasAnyAccountingCombinedMealSheetTemplate,
   hasAccountingMealSheetTemplate,
 } from '@/utils/accountingTemplateSupport'
 
@@ -24,6 +26,10 @@ export interface AccountantMealSheetDocumentItem extends AccountantDocumentItemB
   mealType: MealType
 }
 
+export interface AccountantCombinedMealSheetDocumentItem extends AccountantDocumentItemBase {
+  kind: 'combined_meal_sheet'
+}
+
 export interface AccountantCostStatementDocumentItem extends AccountantDocumentItemBase {
   kind: 'cost_statement'
 }
@@ -34,6 +40,7 @@ export interface AccountantCostCalculationDocumentItem extends AccountantDocumen
 
 export type AccountantDocumentItem =
   | AccountantMealSheetDocumentItem
+  | AccountantCombinedMealSheetDocumentItem
   | AccountantCostStatementDocumentItem
   | AccountantCostCalculationDocumentItem
 
@@ -72,6 +79,20 @@ export function buildAccountantDocumentCards(
           'Помесячный шаблон табеля по всем поддержанным категориям. В ячейках дней ставятся X по фактической выдаче обеда.',
         badgeLabel: mealTypeLabels.lunch,
         mealType: 'lunch',
+      })
+    }
+
+    if (hasAnyAccountingCombinedMealSheetTemplate(categories)) {
+      cards.push({
+        key: 'meal-all-combined',
+        kind: 'combined_meal_sheet',
+        categoryId: ACCOUNTING_ALL_CATEGORIES_ID,
+        categoryCode: 'all',
+        categoryName: 'Все категории',
+        title: 'Табель учета питания (Общий)',
+        description:
+          'Помесячный общий табель по завтракам и обедам. В ячейках дней используются отметки З, О и З/О.',
+        badgeLabel: 'Общий',
       })
     }
 
@@ -122,6 +143,22 @@ export function buildAccountantDocumentCards(
       mealType,
     }))
 
+    const combinedMealSheetCards: AccountantCombinedMealSheetDocumentItem[] = hasAccountingCombinedMealSheetTemplate(category)
+      ? [
+          {
+            key: `meal-${category.id}-combined`,
+            kind: 'combined_meal_sheet',
+            categoryId: category.id,
+            categoryCode: category.code,
+            categoryName: category.name,
+            title: 'Табель учета питания (Общий)',
+            description:
+              'Помесячный общий табель по завтракам и обедам. В ячейках дней используются отметки З, О и З/О.',
+            badgeLabel: 'Общий',
+          },
+        ]
+      : []
+
     const costStatementCards: AccountantCostStatementDocumentItem[] = hasAccountingCostStatementTemplate(category)
       ? [
           {
@@ -158,7 +195,7 @@ export function buildAccountantDocumentCards(
         ]
       : []
 
-    return [...mealSheetCards, ...costStatementCards, ...costCalculationCards]
+    return [...mealSheetCards, ...combinedMealSheetCards, ...costStatementCards, ...costCalculationCards]
   })
 }
 
@@ -177,6 +214,9 @@ export function describeAccountantSelectionDocuments(
     }
     if (mealTypes.length > 0) {
       documents.push(`табели: ${mealTypes.join(', ')}`)
+    }
+    if (hasAnyAccountingCombinedMealSheetTemplate(categories)) {
+      documents.push('общий табель')
     }
     if (categories.some((category) => hasAccountingCostStatementTemplate(category))) {
       documents.push('ведомость стоимости')
@@ -197,6 +237,9 @@ export function describeAccountantSelectionDocuments(
 
   if (mealSheets.length > 0) {
     documents.push(`табели: ${mealSheets.join(', ')}`)
+  }
+  if (hasAccountingCombinedMealSheetTemplate(selectedCategory)) {
+    documents.push('общий табель')
   }
   if (hasAccountingCostStatementTemplate(selectedCategory)) {
     documents.push('ведомость стоимости')
@@ -230,6 +273,9 @@ export function buildAccountantDocumentPreviewKey(document: AccountantDocumentIt
   if (document.kind === 'meal_sheet') {
     return `preview-meal-${document.categoryId}-${document.mealType}`
   }
+  if (document.kind === 'combined_meal_sheet') {
+    return `preview-meal-${document.categoryId}-combined`
+  }
   if (document.kind === 'cost_statement') {
     return `preview-cost-statement-${document.categoryId}`
   }
@@ -239,6 +285,9 @@ export function buildAccountantDocumentPreviewKey(document: AccountantDocumentIt
 export function buildAccountantDocumentExcelKey(document: AccountantDocumentItem): string {
   if (document.kind === 'meal_sheet') {
     return `excel-meal-${document.categoryId}-${document.mealType}`
+  }
+  if (document.kind === 'combined_meal_sheet') {
+    return `excel-meal-${document.categoryId}-combined`
   }
   if (document.kind === 'cost_statement') {
     return `excel-cost-statement-${document.categoryId}`

@@ -1,4 +1,6 @@
 from .service import (
+    build_combined_meal_sheet_document,
+    build_combined_meal_sheet_workbook_bytes,
     build_cost_calculation_document,
     build_cost_calculation_workbook_bytes,
     build_cost_statement_document,
@@ -10,6 +12,8 @@ from .service import (
 )
 
 __all__ = [
+    "build_combined_meal_sheet_document",
+    "build_combined_meal_sheet_workbook_bytes",
     "build_cost_calculation_document",
     "build_cost_calculation_workbook_bytes",
     "build_cost_statement_document",

@@ -14,6 +14,12 @@ from openpyxl.utils import get_column_letter
 
 from app.models import Category, HolidayCalendar, Student, db
 from app.services.accounting_documents.cell_values import format_cell_display_value
+from app.services.accounting_documents.combined_meal_sheet_workbook import (
+    AMOUNT_TOTAL_COLUMN,
+    BREAKFAST_TOTAL_COLUMN,
+    HEADER_ROW as COMBINED_MEAL_SHEET_HEADER_ROW,
+    LUNCH_TOTAL_COLUMN,
+)
 from app.services.accounting_documents.meal_sheet_header import resolve_meal_sheet_institution_cell
 from app.services.accounting_documents.metadata import (
     ALL_CATEGORIES_COST_CALCULATION_LINE,
@@ -258,6 +264,13 @@ def workbook_from_response(response) -> tuple:
     assert response.status_code == 200
     workbook = load_workbook(BytesIO(response.data))
     return workbook, workbook.active
+
+
+def find_student_row(sheet, student_name: str, *, student_column: str = "B") -> int:
+    for row_index in range(1, sheet.max_row + 1):
+        if sheet[f"{student_column}{row_index}"].value == student_name:
+            return row_index
+    raise AssertionError(f"Не найдена строка студента {student_name}")
 
 
 def workbook_cell_display_value(sheet, cell_ref: str) -> str:
@@ -811,6 +824,33 @@ def test_accountant_all_categories_documents_aggregate_supported_categories(clie
     assert meal_signature_row_values
     assert any(value in meal_payload["html"] for value in meal_signature_row_values)
 
+    combined_document_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/document",
+        headers=accountant_headers,
+        json={
+            "month": orphan_prepared["month"],
+            "year": orphan_prepared["year"],
+            "category_id": 0,
+        },
+    )
+    assert combined_document_response.status_code == 200
+    combined_payload = combined_document_response.get_json()["data"]
+    for student_name in lunch_names:
+        assert student_name in combined_payload["html"]
+
+    combined_workbook_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/xlsx",
+        headers=accountant_headers,
+        json={
+            "month": orphan_prepared["month"],
+            "year": orphan_prepared["year"],
+            "category_id": 0,
+        },
+    )
+    _, combined_sheet = workbook_from_response(combined_workbook_response)
+    assert combined_sheet.page_setup.orientation == "landscape"
+    assert combined_sheet[f"{AMOUNT_TOTAL_COLUMN}{combined_sheet.max_row - 2}"].value in {830, 830.0}
+
     statement_document_response = client.post(
         "/api/reports/accounting-documents/cost-statement/document",
         headers=accountant_headers,
@@ -878,6 +918,67 @@ def test_accountant_meal_sheet_hides_unused_days_and_rows_for_february(client):
     assert visible_day_numbers(sheet, header_row=config.header_day_row) == list(range(1, 29))
     assert sheet.row_dimensions[config.data_start_row].hidden is True
     assert sheet.row_dimensions[config.data_start_row + 1].hidden is True
+
+
+def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_landscape(client, app):
+    accountant_headers = login(client, "accountant")
+    student_name = "Общий Табель Студент"
+    prepared = prepare_accounting_records(
+        client,
+        app,
+        student_card="200099",
+        category_code="ovz",
+        full_name=student_name,
+        group_name="ОБЩ-21",
+        meal_types=("breakfast", "lunch"),
+    )
+
+    request_payload = {
+        "month": prepared["month"],
+        "year": prepared["year"],
+        "category_id": prepared["category_id"],
+    }
+    document_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/document",
+        headers=accountant_headers,
+        json=request_payload,
+    )
+
+    assert document_response.status_code == 200
+    payload = document_response.get_json()["data"]
+    assert payload["page_orientation"] == "landscape"
+    assert payload["print_mode"] == "embedded"
+    assert "Табель учета питания (общий)" in payload["title"]
+    assert "З/О" in payload["html"]
+
+    print_width, printable_width = extract_print_metrics(payload["html"])
+    assert print_width <= printable_width + 0.01
+
+    workbook_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/xlsx",
+        headers=accountant_headers,
+        json=request_payload,
+    )
+    _, sheet = workbook_from_response(workbook_response)
+
+    assert sheet.page_setup.orientation == "landscape"
+    assert int(sheet.page_setup.fitToWidth) == 1
+
+    day_column = find_day_column(
+        sheet,
+        header_row=COMBINED_MEAL_SHEET_HEADER_ROW,
+        day_number=prepared["service_day"].day,
+    )
+    student_row = find_student_row(sheet, student_name)
+    assert sheet[f"{day_column}{student_row}"].value == "З/О"
+    assert sheet[f"{BREAKFAST_TOTAL_COLUMN}{student_row}"].value == 1
+    assert sheet[f"{LUNCH_TOTAL_COLUMN}{student_row}"].value == 1
+    assert sheet[f"{AMOUNT_TOTAL_COLUMN}{student_row}"].value == 260
+
+    metadata = editable_metadata_by_key(payload)
+    assert set(metadata) == {"institution", "preparedByName"}
+    assert metadata["institution"]["cell"] == "A1"
+    assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, "A1")
 
 
 @pytest.mark.parametrize(

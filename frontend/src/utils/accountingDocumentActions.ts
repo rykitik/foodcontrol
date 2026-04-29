@@ -1,7 +1,9 @@
 import {
+  downloadAccountingCombinedMealSheetXlsx,
   downloadAccountingCostCalculationXlsx,
   downloadAccountingCostStatementXlsx,
   downloadAccountingMealSheetXlsx,
+  getAccountingCombinedMealSheetDocument,
   getAccountingCostCalculationDocument,
   getAccountingCostStatementDocument,
   getAccountingMealSheetDocument,
@@ -14,6 +16,7 @@ import type {
   AccountantMealSheetDocumentItem,
 } from '@/utils/accountingDocumentCatalog'
 import {
+  buildAccountingCombinedMealSheetFilename,
   buildAccountingCostCalculationFilename,
   buildAccountingCostStatementFilename,
   buildAccountingMealSheetFilename,
@@ -21,6 +24,7 @@ import {
 import { saveBlob } from '@/utils/files'
 import { printDocument } from '@/utils/printDocument'
 import type {
+  AccountingCombinedMealSheetRequest,
   AccountingCostCalculationRequest,
   AccountingCostStatementRequest,
   AccountingDocumentMetadataResetRequest,
@@ -44,6 +48,10 @@ export async function loadAccountingDocument(
     return await getAccountingMealSheetDocument(buildMealSheetRequest(document, context), context.token)
   }
 
+  if (document.kind === 'combined_meal_sheet') {
+    return await getAccountingCombinedMealSheetDocument(buildCombinedMealSheetRequest(document, context), context.token)
+  }
+
   if (document.kind === 'cost_calculation') {
     return await getAccountingCostCalculationDocument(buildCostCalculationRequest(document, context), context.token)
   }
@@ -58,6 +66,10 @@ export function printAccountingDocument(document: AccountantDocumentItem, printa
 
   if (document.kind === 'meal_sheet') {
     return `Открыта печатная форма табеля: ${mealTypeLabels[document.mealType]}, ${document.categoryName}`
+  }
+
+  if (document.kind === 'combined_meal_sheet') {
+    return `Открыта печатная форма общего табеля: ${document.categoryName}`
   }
 
   if (document.kind === 'cost_calculation') {
@@ -78,6 +90,15 @@ export async function downloadAccountingDocument(
       buildAccountingMealSheetFilename(document.categoryCode, document.mealType, context.month, context.year),
     )
     return `Excel-файл табеля подготовлен: ${mealTypeLabels[document.mealType]}, ${document.categoryName}`
+  }
+
+  if (document.kind === 'combined_meal_sheet') {
+    const blob = await downloadAccountingCombinedMealSheetXlsx(
+      buildCombinedMealSheetRequest(document, context),
+      context.token,
+    )
+    saveBlob(blob, buildAccountingCombinedMealSheetFilename(document.categoryCode, context.month, context.year))
+    return `Excel-файл общего табеля подготовлен: ${document.categoryName}`
   }
 
   if (document.kind === 'cost_calculation') {
@@ -121,6 +142,17 @@ function buildMealSheetRequest(
     year: context.year,
     category_id: document.categoryId,
     meal_type: document.mealType,
+  }
+}
+
+function buildCombinedMealSheetRequest(
+  document: AccountantDocumentItem,
+  context: AccountantDocumentActionContext,
+): AccountingCombinedMealSheetRequest {
+  return {
+    month: context.month,
+    year: context.year,
+    category_id: document.categoryId,
   }
 }
 

@@ -1,13 +1,19 @@
 import type { MealType } from './index'
 import type { AccountingDocumentMetadataValues } from './accountingDocumentMetadata'
 
-export type AccountingDocumentKind = 'meal_sheet' | 'cost_statement' | 'cost_calculation'
+export type AccountingDocumentKind = 'meal_sheet' | 'combined_meal_sheet' | 'cost_statement' | 'cost_calculation'
 
 export interface AccountingMealSheetRequest {
   month: number
   year: number
   category_id: number
   meal_type: MealType
+}
+
+export interface AccountingCombinedMealSheetRequest {
+  month: number
+  year: number
+  category_id: number
 }
 
 export interface AccountingCostStatementRequest {

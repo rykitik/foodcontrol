@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from .combined_meal_sheet_payload import build_combined_meal_sheet_payload
 from .context import AccountingDocumentContext
 from .editable_metadata import (
     apply_document_editable_metadata_overrides,
     normalize_supported_document_metadata_values,
 )
+from .combined_meal_sheet_workbook import build_combined_meal_sheet_workbook
 from .html import render_accounting_document
 from .global_metadata import (
     filter_accounting_document_global_metadata_values,
@@ -12,7 +14,12 @@ from .global_metadata import (
     load_accounting_document_global_metadata_values,
     save_accounting_document_global_metadata_values,
 )
-from .metadata import cost_calculation_filename_by_code, cost_statement_filename_by_code, meal_sheet_filename_by_code
+from .metadata import (
+    combined_meal_sheet_filename_by_code,
+    cost_calculation_filename_by_code,
+    cost_statement_filename_by_code,
+    meal_sheet_filename_by_code,
+)
 from .metadata_overrides import (
     load_accounting_document_metadata_override_values,
     reset_accounting_document_metadata_override_values,
@@ -49,6 +56,29 @@ def build_meal_sheet_workbook_bytes(
 ) -> tuple[bytes, str]:
     payload = build_meal_sheet_payload(month=month, year=year, category_id=category_id, meal_type=meal_type, context=context)
     filename = meal_sheet_filename_by_code(payload["category_code"], meal_type, month, year)
+    return _build_workbook_bytes(payload), filename
+
+
+def build_combined_meal_sheet_document(
+    *,
+    month: int,
+    year: int,
+    category_id: int,
+    context: AccountingDocumentContext,
+) -> dict:
+    payload = build_combined_meal_sheet_payload(month=month, year=year, category_id=category_id, context=context)
+    return _build_document_response(payload)
+
+
+def build_combined_meal_sheet_workbook_bytes(
+    *,
+    month: int,
+    year: int,
+    category_id: int,
+    context: AccountingDocumentContext,
+) -> tuple[bytes, str]:
+    payload = build_combined_meal_sheet_payload(month=month, year=year, category_id=category_id, context=context)
+    filename = combined_meal_sheet_filename_by_code(payload["category_code"], month, year)
     return _build_workbook_bytes(payload), filename
 
 
@@ -190,6 +220,8 @@ def _build_template_workbook(payload: dict, custom_values: dict[str, str] | None
     document_type = payload["document_type"]
     if document_type == "meal_sheet":
         return build_meal_sheet_template_workbook(payload)
+    if document_type == "combined_meal_sheet":
+        return build_combined_meal_sheet_workbook(payload)
     if document_type == "cost_statement":
         return build_cost_statement_template_workbook(payload)
     if document_type == "cost_calculation":
@@ -214,6 +246,14 @@ def _build_document_payload(
             year=year,
             category_id=category_id,
             meal_type=meal_type,
+            context=context,
+        )
+
+    if document_kind == "combined_meal_sheet":
+        return build_combined_meal_sheet_payload(
+            month=month,
+            year=year,
+            category_id=category_id,
             context=context,
         )
 

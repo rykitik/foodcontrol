@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import AccountantDocumentPreviewStage from '@/components/accountant/AccountantDocumentPreviewStage.vue'
 import AppIcon from '@/components/icons/AppIcon.vue'
@@ -26,6 +26,8 @@ defineEmits<{
   toggleMetadata: []
 }>()
 
+const isFullscreenOpen = ref(false)
+
 const statusLabel = computed(() => {
   if (props.loading) {
     return 'Документ формируется'
@@ -39,6 +41,20 @@ const statusLabel = computed(() => {
 const metadataButtonLabel = computed(() =>
   props.metadataOpen ? 'Скрыть реквизиты' : 'Изменить реквизиты',
 )
+
+const emptyDocumentTitle = 'Документ не выбран'
+
+function openFullscreen() {
+  if (!props.preview) {
+    return
+  }
+
+  isFullscreenOpen.value = true
+}
+
+function closeFullscreen() {
+  isFullscreenOpen.value = false
+}
 </script>
 
 <template>
@@ -111,11 +127,15 @@ const metadataButtonLabel = computed(() =>
     </div>
 
     <AccountantDocumentPreviewStage
-      :document-title="document?.title ?? 'Документ не выбран'"
+      :document-title="document?.title ?? emptyDocumentTitle"
       :preview="preview"
       :loading="loading"
       :metadata-status="metadataStatus"
       :frame-key="document?.key"
+      expandable
+      :is-fullscreen="isFullscreenOpen"
+      @open-fullscreen="openFullscreen"
+      @close-fullscreen="closeFullscreen"
     />
   </section>
 </template>

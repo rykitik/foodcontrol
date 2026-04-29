@@ -65,8 +65,22 @@ def test_preview_left_overflow_content_is_anchored_to_source_cell_right_edge():
     style = render_worksheet_cell_content_style(cell, overflow_direction="left")
 
     assert "display:block" in style
-    assert "float:right" in style
     assert "margin-left:auto" in style
+    assert "text-align:inherit" in style
+
+
+def test_preview_center_overflow_content_keeps_center_alignment():
+    workbook = Workbook()
+    sheet = workbook.active
+    cell = sheet["C3"]
+    cell.value = "центр"
+    cell.alignment = Alignment(horizontal="center")
+
+    style = render_worksheet_cell_content_style(cell, overflow_direction="right")
+
+    assert "margin-left:auto" in style
+    assert "margin-right:auto" in style
+    assert "text-align:inherit" in style
 
 
 def test_meal_sheet_preview_exposes_row_and_overflow_attributes(client, app):

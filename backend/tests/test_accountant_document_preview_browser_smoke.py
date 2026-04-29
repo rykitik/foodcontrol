@@ -193,6 +193,37 @@ def test_accountant_meal_sheet_preview_browser_dom_widths_match_workbook(client,
     assert browser_widths_mm[index_column_position] < browser_widths_mm[day_8_position]
 
 
+def test_accountant_combined_meal_sheet_preview_browser_dom_widths_match_workbook(client, app):
+    accountant_headers = _login(client, "accountant")
+    category_id = _category_id_by_code(app, "ovz")
+    request_payload = {
+        "month": 2,
+        "year": 2025,
+        "category_id": category_id,
+    }
+
+    document_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/document",
+        headers=accountant_headers,
+        json=request_payload,
+    )
+    assert document_response.status_code == 200
+    document_payload = document_response.get_json()["data"]
+    assert document_payload["page_orientation"] == "landscape"
+
+    workbook_response = client.post(
+        "/api/reports/accounting-documents/combined-meal-sheet/xlsx",
+        headers=accountant_headers,
+        json=request_payload,
+    )
+    sheet = _workbook_from_response(workbook_response)
+
+    _assert_preview_and_browser_widths_match_workbook(
+        preview_html=document_payload["html"],
+        sheet=sheet,
+    )
+
+
 def test_accountant_cost_statement_preview_browser_dom_widths_match_workbook(client, app):
     accountant_headers = _login(client, "accountant")
     category_id = _category_id_by_code(app, "low_income")

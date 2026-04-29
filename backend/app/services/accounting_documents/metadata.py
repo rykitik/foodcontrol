@@ -76,6 +76,12 @@ def all_categories_meal_sheet_title() -> str:
     return "Накопительная ведомость по питанию в столовой студентов всех категорий"
 
 
+def combined_meal_sheet_title(category: Category | None) -> str:
+    if category is None:
+        return "Табель учета питания (общий) студентов всех категорий"
+    return f'Табель учета питания (общий) студентов категории "{category_title_label(category)}"'
+
+
 def cost_statement_title() -> str:
     return "ВЕДОМОСТЬ"
 
@@ -100,6 +106,10 @@ def cost_statement_filename(category: Category, month: int, year: int) -> str:
 
 def meal_sheet_filename_by_code(category_code: str, meal_type: str, month: int, year: int) -> str:
     return f"табель_{category_code}_{meal_type}_{year}_{month:02d}.xlsx"
+
+
+def combined_meal_sheet_filename_by_code(category_code: str, month: int, year: int) -> str:
+    return f"табель_общий_{category_code}_{year}_{month:02d}.xlsx"
 
 
 def cost_statement_filename_by_code(category_code: str, month: int, year: int) -> str:

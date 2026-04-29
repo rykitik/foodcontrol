@@ -148,6 +148,8 @@ def build_meal_sheet_payload(
     }
 
 
+
+
 def build_cost_statement_payload(
     *,
     month: int,
@@ -310,6 +312,8 @@ def _resolve_scope_categories(
     return category, [category]
 
 
+
+
 def _category_scope_metadata(category: Category | None) -> dict[str, str | int]:
     if category is None:
         return {
@@ -367,12 +371,15 @@ def _build_student_rows(tickets: list[Ticket]) -> dict[str, dict]:
             "student_id": ticket.student_id,
             "student_name": ticket.student.full_name,
             "group_name": ticket.student.group_name,
+            "category_name": ticket.student.category.name,
             "date_value": ticket.end_date,
             "marks": defaultdict(str),
             "total_count": 0,
             "total_amount": 0.0,
         }
     return rows_by_student
+
+
 
 
 def _iter_days(period_start: date, period_end: date):
