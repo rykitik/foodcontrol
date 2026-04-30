@@ -1,3 +1,5 @@
+import { ACCOUNTING_WORKSHEET_PRINT_BORDER_WIDTH } from './printConfig'
+
 export const ACCOUNTING_PRINT_STYLES = `
   .accounting-form-page {
     font-family: "Calibri", "Arial Narrow", Arial, sans-serif;
@@ -272,20 +274,97 @@ export const ACCOUNTING_PRINT_STYLES = `
   @media print {
     .accounting-worksheet-page {
       overflow: visible;
+      width: 100% !important;
     }
 
     .accounting-worksheet {
       width: var(--accounting-print-width, auto) !important;
       min-width: var(--accounting-print-width, auto) !important;
+      max-width: var(--accounting-print-width, none) !important;
+      overflow: visible !important;
     }
 
     .accounting-worksheet-table {
       width: 100% !important;
       min-width: 100% !important;
+      table-layout: fixed;
+      border-collapse: collapse;
     }
 
     .accounting-worksheet-table col {
       width: var(--accounting-print-col-width) !important;
     }
+
+    .accounting-worksheet-table tr {
+      height: var(--accounting-print-row-height) !important;
+    }
+
+    .accounting-worksheet-table td {
+      font-size: var(
+        --accounting-print-font-size,
+        var(--accounting-cell-font-size, inherit)
+      ) !important;
+      border-width: ${ACCOUNTING_WORKSHEET_PRINT_BORDER_WIDTH} !important;
+    }
+
+    .accounting-worksheet-table td[data-accounting-overflow] {
+      position: relative !important;
+      overflow: visible !important;
+      white-space: pre !important;
+      z-index: 2 !important;
+    }
+
+    .accounting-worksheet-table td[data-accounting-overflow] > span {
+      display: block !important;
+      position: absolute !important;
+      width: max-content !important;
+      max-width: none !important;
+      min-width: 0 !important;
+      white-space: pre !important;
+      pointer-events: none !important;
+      z-index: 10 !important;
+    }
+
+    .accounting-worksheet-table td[data-accounting-overflow='left'] > span {
+      right: 0 !important;
+      left: auto !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      text-align: right !important;
+    }
+
+    .accounting-worksheet-table td[data-accounting-overflow='right'] > span {
+      left: 0 !important;
+      right: auto !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      text-align: left !important;
+    }
+
+    body.accounting-preview-html-print-body .accounting-worksheet-page {
+      width: var(--accounting-screen-width, auto) !important;
+      overflow: visible !important;
+    }
+
+    body.accounting-preview-html-print-body .accounting-worksheet {
+      width: var(--accounting-screen-width, auto) !important;
+      min-width: var(--accounting-screen-width, auto) !important;
+      max-width: none !important;
+      transform: scale(var(--accounting-print-scale, 1));
+      transform-origin: top left;
+    }
+
+    body.accounting-preview-html-print-body .accounting-worksheet-table col {
+      width: var(--accounting-screen-col-width) !important;
+    }
+
+    body.accounting-preview-html-print-body .accounting-worksheet-table tr {
+      height: var(--accounting-screen-row-height) !important;
+    }
+
+    body.accounting-preview-html-print-body .accounting-worksheet-table td {
+      font-size: var(--accounting-cell-font-size, inherit) !important;
+    }
   }
+
 `

@@ -10,7 +10,7 @@ from xml.etree import ElementTree
 import pytest
 from openpyxl import load_workbook
 from openpyxl.cell.cell import MergedCell
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter, range_boundaries
 
 from app.models import Category, HolidayCalendar, Student, db
 from app.services.accounting_documents.cell_values import format_cell_display_value
@@ -184,6 +184,28 @@ def visible_day_widths(sheet, *, header_row: int) -> list[float]:
         if isinstance(cell.value, int):
             widths.append(float(sheet.column_dimensions[cell.column_letter].width or 0))
     return widths
+
+
+def worksheet_print_area_range(sheet) -> str:
+    print_area = sheet.print_area
+    if isinstance(print_area, (list, tuple)):
+        print_area = print_area[0]
+    normalized = str(print_area).replace("$", "")
+    if "!" in normalized:
+        normalized = normalized.split("!", 1)[1]
+    return normalized.strip("'")
+
+
+def assert_no_shrink_to_fit_in_range(sheet, range_string: str) -> None:
+    min_col, min_row, max_col, max_row = range_boundaries(range_string)
+    shrink_cells: list[str] = []
+    for row in sheet.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col):
+        for cell in row:
+            if isinstance(cell, MergedCell):
+                continue
+            if cell.alignment.shrink_to_fit:
+                shrink_cells.append(cell.coordinate)
+    assert shrink_cells == []
 
 
 def assert_worksheet_columns_follow_contract(sheet, contract: tuple[tuple[str, float], ...], *, tolerance: float = 0.001) -> None:
@@ -823,6 +845,7 @@ def test_accountant_all_categories_documents_aggregate_supported_categories(clie
         meal_sheet["B15"].value,
     }
     assert workbook_lunch_names == lunch_names
+    assert "Категория" not in str(meal_sheet["C9"].value)
     meal_signature_row_values = visible_row_text_values(
         meal_sheet,
         row_index=resolve_meal_sheet_template("all", "lunch").signature_row,
@@ -855,6 +878,7 @@ def test_accountant_all_categories_documents_aggregate_supported_categories(clie
     )
     _, combined_sheet = workbook_from_response(combined_workbook_response)
     assert combined_sheet.page_setup.orientation == "landscape"
+    assert float(combined_sheet.column_dimensions["D"].width or 0) == 12
     assert combined_sheet[f"{AMOUNT_TOTAL_COLUMN}{combined_sheet.max_row - 2}"].value in {830, 830.0}
 
     statement_document_response = client.post(
@@ -954,7 +978,7 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
     payload = document_response.get_json()["data"]
     assert payload["page_orientation"] == "landscape"
     assert payload["print_mode"] == "embedded"
-    assert "Табель учета питания (общий)" in payload["title"]
+    assert payload["title"].startswith("Накопительная ведомость по питанию")
     assert "З/О" in payload["html"]
     assert russian_month_name(prepared["service_day"]) in payload["html"]
     assert f'data-accounting-cell="{COMBINED_MEAL_SHEET_MONTH_CELL}"' in payload["html"]
@@ -978,6 +1002,9 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
 
     assert sheet.page_setup.orientation == "landscape"
     assert int(sheet.page_setup.fitToWidth) == 1
+    assert int(sheet.page_setup.fitToHeight) == 0
+    assert sheet.page_setup.scale is None
+    assert sheet.freeze_panes == "E12"
     assert sheet[COMBINED_MEAL_SHEET_TITLE_CELL].value == payload["title"]
     assert sheet[COMBINED_MEAL_SHEET_PERIOD_PREFIX_CELL].value == "за "
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].value == russian_month_name(prepared["service_day"])
@@ -986,13 +1013,17 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].font.color.rgb == "000033CC"
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].border.bottom.style == "thin"
     assert sheet[COMBINED_MEAL_SHEET_YEAR_CELL].value == f"{prepared['year']} г."
+    assert sheet[COMBINED_MEAL_SHEET_YEAR_CELL].alignment.horizontal == "right"
+    assert worksheet_print_area_range(sheet) == f"A7:{AMOUNT_TOTAL_COLUMN}{sheet.max_row}"
 
     day_column = find_day_column(
         sheet,
         header_row=COMBINED_MEAL_SHEET_HEADER_ROW,
         day_number=prepared["service_day"].day,
     )
-    assert sheet[f"{day_column}{COMBINED_MEAL_SHEET_HEADER_ROW}"].alignment.shrink_to_fit is True
+    assert float(sheet.column_dimensions[day_column].width or 0) == 3.0
+    assert sheet[f"{day_column}{COMBINED_MEAL_SHEET_HEADER_ROW}"].alignment.shrink_to_fit in {None, False}
+    assert float(sheet.column_dimensions["D"].width or 0) == 12
     student_row = find_student_row(sheet, student_name)
     assert sheet[f"{day_column}{student_row}"].value == "З/О"
     assert sheet[f"{BREAKFAST_TOTAL_COLUMN}{student_row}"].value == 1
@@ -1003,6 +1034,12 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
     assert set(metadata) == {"institution", "preparedByName"}
     assert metadata["institution"]["cell"] == COMBINED_MEAL_SHEET_INSTITUTION_CELL
     assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, COMBINED_MEAL_SHEET_INSTITUTION_CELL)
+    assert sheet[COMBINED_MEAL_SHEET_INSTITUTION_CELL].font.name == "Arial"
+    assert sheet[COMBINED_MEAL_SHEET_INSTITUTION_CELL].font.sz == 12
+    assert sheet[COMBINED_MEAL_SHEET_INSTITUTION_CELL].font.bold is True
+    assert sheet[COMBINED_MEAL_SHEET_INSTITUTION_CELL].alignment.shrink_to_fit in {None, False}
+    assert sheet[COMBINED_MEAL_SHEET_INSTITUTION_CELL].row > sheet[COMBINED_MEAL_SHEET_TITLE_CELL].row
+    assert_no_shrink_to_fit_in_range(sheet, worksheet_print_area_range(sheet))
 
 
 @pytest.mark.parametrize(
@@ -1031,15 +1068,22 @@ def test_accountant_meal_sheet_normalizes_day_column_widths(client, category_id:
     _, sheet = workbook_from_response(response)
     widths = visible_day_widths(sheet, header_row=config.header_day_row)
 
+    assert int(sheet.page_setup.fitToWidth) == 1
+    assert int(sheet.page_setup.fitToHeight) == 0
+    assert sheet.page_setup.scale is None
     assert len(widths) == 28
     assert max(widths) - min(widths) < 0.01
     assert config.day_slot_width is not None
     assert all(abs(width - config.day_slot_width) < 0.01 for width in widths)
     assert sheet[config.month_cell].alignment.wrap_text is True
+    assert worksheet_print_area_range(sheet) == (
+        f"{config.visible_range.split(':', 1)[0]}:{config.total_column}{config.signature_row}"
+    )
 
     first_day_column = find_day_column(sheet, header_row=config.header_day_row, day_number=1)
-    assert sheet[f"{first_day_column}{config.header_day_row}"].alignment.shrink_to_fit is True
-    assert sheet[f"{first_day_column}{config.meal_label_row}"].alignment.shrink_to_fit is True
+    assert sheet[f"{first_day_column}{config.header_day_row}"].alignment.shrink_to_fit in {None, False}
+    assert sheet[f"{first_day_column}{config.meal_label_row}"].alignment.shrink_to_fit in {None, False}
+    assert_no_shrink_to_fit_in_range(sheet, worksheet_print_area_range(sheet))
 
 
 @pytest.mark.parametrize(
@@ -1149,8 +1193,21 @@ def test_accountant_cost_statement_document_exposes_cell_bound_editable_metadata
 
     _, sheet = workbook_from_response(workbook_response)
     checked_row = int("".join(char for char in config.prepared_by_binding.cell if char.isdigit())) + 2
+    merged_ranges = {str(merged_range) for merged_range in sheet.merged_cells.ranges}
+    institution_cell_html = re.search(
+        rf'<td(?=[^>]*data-accounting-cell="{config.institution_cell}")(?=[^>]*colspan="5")[^>]*>',
+        payload["html"],
+    )
+    funding_source_cell_html = re.search(
+        r'<td(?=[^>]*data-accounting-cell="C15")(?=[^>]*colspan="5")[^>]*>',
+        payload["html"],
+    )
 
     assert f'data-accounting-cell="{config.institution_cell}"' in payload["html"]
+    assert "C9:G9" in merged_ranges
+    assert "C15:G15" in merged_ranges
+    assert institution_cell_html is not None
+    assert funding_source_cell_html is not None
     assert set(metadata) == {
         "reportDate",
         "institution",

@@ -78,8 +78,8 @@ def all_categories_meal_sheet_title() -> str:
 
 def combined_meal_sheet_title(category: Category | None) -> str:
     if category is None:
-        return "Табель учета питания (общий) студентов всех категорий"
-    return f'Табель учета питания (общий) студентов категории "{category_title_label(category)}"'
+        return all_categories_meal_sheet_title()
+    return meal_sheet_title(category)
 
 
 def cost_statement_title() -> str:

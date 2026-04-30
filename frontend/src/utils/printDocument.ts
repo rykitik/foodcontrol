@@ -1,7 +1,10 @@
 import type { PrintableDocument } from '@/types'
 import { ACCOUNTING_PRINT_STYLES } from './accountingPrintStyles'
+import { PRINT_PAGE_MARGINS } from './printConfig'
 import { SOCIAL_PRINT_STYLES } from './socialPrintStyles'
 import { TICKET_PRINT_STYLES } from './ticketPrintStyles'
+
+type AccountingHtmlPrintMode = 'preview-html' | 'print-layout'
 
 export function printDocument(document: PrintableDocument): boolean {
   const isTicketSheet = isTicketSheetDocument(document)
@@ -12,7 +15,7 @@ export function printDocument(document: PrintableDocument): boolean {
   }
 
   printWindow.document.open()
-  printWindow.document.write(buildPrintableHtml(document))
+  printWindow.document.write(buildPrintableHtml(document, { accountingHtmlPrintMode: 'preview-html' }))
   printWindow.document.close()
   printWindow.focus()
   void printWhenReady(printWindow)
@@ -44,12 +47,31 @@ async function printWhenReady(printWindow: Window): Promise<void> {
   })
 }
 
-export function buildPrintableHtml(document: PrintableDocument) {
+export function buildPrintableHtml(
+  document: PrintableDocument,
+  options: { accountingHtmlPrintMode?: AccountingHtmlPrintMode } = {},
+) {
   const isTicketSheet = isTicketSheetDocument(document)
   const isEmbedded = document.print_mode === 'embedded'
+  const isAccountingWorksheet = isAccountingWorksheetDocument(document)
   const pageOrientation = isTicketSheet ? 'portrait' : (document.page_orientation ?? 'portrait')
-  const pageMargin = isTicketSheet ? '0' : isEmbedded ? '7mm' : pageOrientation === 'landscape' ? '6mm' : '10mm'
+  const pageRule = isAccountingWorksheet
+    ? `@page { size: A4 landscape; margin: ${PRINT_PAGE_MARGINS.accountingWorksheet}; }`
+    : `@page { size: A4 ${pageOrientation}; margin: ${pageMarginForDocument(
+        isTicketSheet,
+        isEmbedded,
+        pageOrientation,
+      )}; }`
   const pageTitle = isTicketSheet ? '' : document.title
+  const bodyClasses = [
+    isTicketSheet ? 'ticket-sheet-print' : '',
+    isEmbedded ? 'embedded-print-body' : '',
+    isAccountingWorksheet && options.accountingHtmlPrintMode === 'preview-html'
+      ? 'accounting-preview-html-print-body'
+      : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
 
   return `<!doctype html>
   <html lang="ru">
@@ -57,7 +79,7 @@ export function buildPrintableHtml(document: PrintableDocument) {
       <meta charset="UTF-8" />
       <title>${pageTitle}</title>
       <style>
-        @page { size: A4 ${pageOrientation}; margin: ${pageMargin}; }
+        ${pageRule}
         html, body { width: 100%; min-height: 100%; }
         body { font-family: "Segoe UI", Arial, sans-serif; margin: 10px; color: #111827; }
         body.embedded-print-body { margin: 0; }
@@ -91,7 +113,7 @@ export function buildPrintableHtml(document: PrintableDocument) {
         ${SOCIAL_PRINT_STYLES}
       </style>
     </head>
-    <body class="${isTicketSheet ? 'ticket-sheet-print' : ''} ${isEmbedded ? 'embedded-print-body' : ''}">
+    <body class="${bodyClasses}">
       ${
         isEmbedded || isTicketSheet
           ? document.html
@@ -108,4 +130,18 @@ export function buildPrintableHtml(document: PrintableDocument) {
 
 function isTicketSheetDocument(document: PrintableDocument): boolean {
   return document.html.includes('ticket-sheet-page') || document.html.includes('ticket-print-grid')
+}
+
+function isAccountingWorksheetDocument(document: PrintableDocument): boolean {
+  return document.print_mode === 'embedded' && document.html.includes('accounting-worksheet')
+}
+
+function pageMarginForDocument(isTicketSheet: boolean, isEmbedded: boolean, pageOrientation: string): string {
+  if (isTicketSheet) {
+    return PRINT_PAGE_MARGINS.ticket
+  }
+  if (isEmbedded) {
+    return PRINT_PAGE_MARGINS.embedded
+  }
+  return pageOrientation === 'landscape' ? PRINT_PAGE_MARGINS.landscape : PRINT_PAGE_MARGINS.portrait
 }

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from io import BytesIO
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.auth import ensure_building_access, login_required
 from app.services.accounting_documents import (
@@ -24,6 +24,7 @@ from app.services.accounting_documents.global_metadata import (
     reset_accounting_document_global_metadata_values,
     save_accounting_document_global_metadata_values,
 )
+from app.services.accounting_documents.pdf import XlsxToPdfConversionError, convert_xlsx_to_pdf
 from app.services.meal_sheet_documents import build_meal_sheet_document_payload
 from app.utils.audit import log_action
 
@@ -211,6 +212,7 @@ def accountant_meal_sheet_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    document = _with_accounting_pdf_availability(document)
     log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
@@ -239,6 +241,21 @@ def accountant_meal_sheet_xlsx(current_user):
     )
 
 
+@reports_bp.post("/accounting-documents/meal-sheet/pdf")
+@login_required(roles=["accountant", "head_social", "admin"])
+def accountant_meal_sheet_pdf(current_user):
+    payload = request.get_json(silent=True) or {}
+    parsed, error = parse_accounting_document_runtime(payload, current_user, require_meal_type=True)
+    if error:
+        return error
+
+    return _accounting_document_pdf_response(
+        current_user,
+        parsed,
+        build_meal_sheet_workbook_bytes,
+    )
+
+
 @reports_bp.post("/accounting-documents/combined-meal-sheet/document")
 @login_required(roles=["accountant", "head_social", "admin"])
 def accountant_combined_meal_sheet_document(current_user):
@@ -254,6 +271,7 @@ def accountant_combined_meal_sheet_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    document = _with_accounting_pdf_availability(document)
     log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
@@ -282,6 +300,21 @@ def accountant_combined_meal_sheet_xlsx(current_user):
     )
 
 
+@reports_bp.post("/accounting-documents/combined-meal-sheet/pdf")
+@login_required(roles=["accountant", "head_social", "admin"])
+def accountant_combined_meal_sheet_pdf(current_user):
+    payload = request.get_json(silent=True) or {}
+    parsed, error = parse_accounting_document_runtime(payload, current_user)
+    if error:
+        return error
+
+    return _accounting_document_pdf_response(
+        current_user,
+        parsed,
+        build_combined_meal_sheet_workbook_bytes,
+    )
+
+
 @reports_bp.post("/accounting-documents/cost-statement/document")
 @login_required(roles=["accountant", "head_social", "admin"])
 def accountant_cost_statement_document(current_user):
@@ -297,6 +330,7 @@ def accountant_cost_statement_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    document = _with_accounting_pdf_availability(document)
     log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
@@ -325,6 +359,21 @@ def accountant_cost_statement_xlsx(current_user):
     )
 
 
+@reports_bp.post("/accounting-documents/cost-statement/pdf")
+@login_required(roles=["accountant", "head_social", "admin"])
+def accountant_cost_statement_pdf(current_user):
+    payload = request.get_json(silent=True) or {}
+    parsed, error = parse_accounting_document_runtime(payload, current_user)
+    if error:
+        return error
+
+    return _accounting_document_pdf_response(
+        current_user,
+        parsed,
+        build_cost_statement_workbook_bytes,
+    )
+
+
 @reports_bp.post("/accounting-documents/cost-calculation/document")
 @login_required(roles=["accountant", "head_social", "admin"])
 def accountant_cost_calculation_document(current_user):
@@ -340,6 +389,7 @@ def accountant_cost_calculation_document(current_user):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    document = _with_accounting_pdf_availability(document)
     log_accounting_document_action(current_user, "generate_accounting_document", parsed)
     return jsonify({"data": document})
 
@@ -366,6 +416,65 @@ def accountant_cost_calculation_xlsx(current_user):
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+
+@reports_bp.post("/accounting-documents/cost-calculation/pdf")
+@login_required(roles=["accountant", "head_social", "admin"])
+def accountant_cost_calculation_pdf(current_user):
+    payload = request.get_json(silent=True) or {}
+    parsed, error = parse_accounting_document_runtime(payload, current_user)
+    if error:
+        return error
+
+    return _accounting_document_pdf_response(
+        current_user,
+        parsed,
+        build_cost_calculation_workbook_bytes,
+    )
+
+
+def _accounting_document_pdf_response(current_user, parsed: dict, workbook_builder):
+    if not current_app.config.get("ACCOUNTING_PDF_ENABLED", False):
+        return jsonify({"error": "PDF-печать бухгалтерских документов отключена"}), 503
+
+    try:
+        workbook_bytes, filename = workbook_builder(**parsed)
+        pdf_bytes = convert_xlsx_to_pdf(
+            workbook_bytes,
+            libreoffice_bin=current_app.config.get("LIBREOFFICE_BIN", "soffice"),
+            timeout_seconds=current_app.config.get("ACCOUNTING_PDF_TIMEOUT_SECONDS", 30),
+            max_auto_scale_percent=current_app.config.get("ACCOUNTING_PDF_MAX_AUTO_SCALE", 125),
+        )
+    except LookupError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except XlsxToPdfConversionError as exc:
+        current_app.logger.warning("Accounting PDF conversion failed: %s", exc)
+        return jsonify({"error": "Не удалось сформировать PDF. Используйте HTML-печать."}), 503
+
+    log_accounting_document_action(current_user, "export_accounting_document_pdf", parsed)
+    response = send_file(
+        BytesIO(pdf_bytes),
+        as_attachment=False,
+        download_name=_pdf_filename(filename),
+        mimetype="application/pdf",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+def _pdf_filename(xlsx_filename: str) -> str:
+    if xlsx_filename.lower().endswith(".xlsx"):
+        return f"{xlsx_filename[:-5]}.pdf"
+    return f"{xlsx_filename}.pdf"
+
+
+def _with_accounting_pdf_availability(document: dict) -> dict:
+    return {
+        **document,
+        "pdf_available": bool(current_app.config.get("ACCOUNTING_PDF_ENABLED", False)),
+    }
 
 
 @reports_bp.post("/accounting-documents/metadata/save")
@@ -401,6 +510,7 @@ def accountant_document_metadata_save(current_user):
             "field_count": len(values),
         },
     )
+    document = _with_accounting_pdf_availability(document)
     return jsonify({"data": document})
 
 
@@ -426,6 +536,7 @@ def accountant_document_metadata_reset(current_user):
         None,
         build_document_audit_details(parsed),
     )
+    document = _with_accounting_pdf_availability(document)
     return jsonify({"data": document})
 
 

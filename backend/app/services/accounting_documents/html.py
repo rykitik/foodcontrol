@@ -12,7 +12,14 @@ from .template_workbook import (
     build_cost_statement_template_workbook,
     build_meal_sheet_template_workbook,
 )
-from .worksheet_layout import merged_maps, overflow_visible_cells, row_height_mm, worksheet_widths
+from .worksheet_layout import (
+    merged_maps,
+    overflow_visible_cells,
+    printable_height_mm,
+    row_height_mm,
+    worksheet_uses_fit_to_height,
+    worksheet_widths,
+)
 from .worksheet_styles import render_worksheet_cell_content_style, render_worksheet_cell_style
 
 
@@ -62,6 +69,18 @@ def _render_worksheet_page(sheet, visible_range: str) -> str:
         sheet,
         visible_columns,
     )
+    row_heights = {row_index: row_height_mm(sheet, row_index) for row_index in visible_rows}
+    screen_height = sum(row_heights.values())
+    print_scale = _effective_print_scale(
+        sheet,
+        screen_width=screen_width,
+        screen_height=screen_height,
+        print_width=print_width,
+    )
+    if screen_width > 0 and print_scale < 1:
+        print_width = screen_width * print_scale
+        print_column_widths = {index: width * print_scale for index, width in screen_column_widths.items()}
+
     colgroup_html = "".join(
         (
             f'<col style="--accounting-screen-col-width:{screen_column_widths[index]:.4f}mm;'
@@ -73,7 +92,8 @@ def _render_worksheet_page(sheet, visible_range: str) -> str:
 
     rows_html: list[str] = []
     for row_index in visible_rows:
-        row_height = row_height_mm(sheet, row_index)
+        row_height = row_heights[row_index]
+        print_row_height = row_height * print_scale
         cell_html_parts: list[str] = []
 
         for column_index in visible_columns:
@@ -95,7 +115,11 @@ def _render_worksheet_page(sheet, visible_range: str) -> str:
             overflow_direction = overflow_cells.get(coordinate)
             if overflow_direction is not None:
                 attrs.append(f'data-accounting-overflow="{escape(overflow_direction, quote=True)}"')
-            cell_style = render_worksheet_cell_style(cell, allow_overflow=overflow_direction is not None)
+            cell_style = render_worksheet_cell_style(
+                cell,
+                allow_overflow=overflow_direction is not None,
+                print_scale=print_scale,
+            )
             cell_content_html = render_cell_value_html(cell.value, cell.number_format)
             content_style = render_worksheet_cell_content_style(cell, overflow_direction=overflow_direction)
             if content_style:
@@ -110,19 +134,29 @@ def _render_worksheet_page(sheet, visible_range: str) -> str:
 
         rows_html.append(
             f'<tr data-accounting-row="{row_index}" data-accounting-row-height-mm="{row_height:.2f}" '
-            f'style="height:{row_height:.2f}mm">{"".join(cell_html_parts)}</tr>'
+            f'style="--accounting-screen-row-height:{row_height:.4f}mm;'
+            f'--accounting-print-row-height:{print_row_height:.4f}mm;'
+            f'height:var(--accounting-screen-row-height)">{"".join(cell_html_parts)}</tr>'
         )
 
+    print_height = screen_height * print_scale
+    worksheet_vars = (
+        f"--accounting-screen-width:{screen_width:.4f}mm;"
+        f"--accounting-print-width:{print_width:.4f}mm;"
+        f"--accounting-screen-height:{screen_height:.4f}mm;"
+        f"--accounting-print-height:{print_height:.4f}mm;"
+        f"--accounting-print-scale:{print_scale:.8f};"
+    )
+
     return (
-        '<section class="accounting-worksheet-page">'
+        f'<section class="accounting-worksheet-page" style="{worksheet_vars}">'
         + (
             f'<div class="accounting-worksheet" '
-            f'style="--accounting-screen-width:{screen_width:.4f}mm;'
-            f'--accounting-print-width:{print_width:.4f}mm;'
-            'width:var(--accounting-screen-width)" '
+            'style="width:var(--accounting-screen-width)" '
             f'data-screen-width-mm="{screen_width:.4f}" '
             f'data-print-width-mm="{print_width:.4f}" '
-            f'data-printable-width-mm="{printable_width:.4f}">'
+            f'data-printable-width-mm="{printable_width:.4f}" '
+            f'data-print-scale="{print_scale:.8f}">'
         )
         + '<table class="accounting-worksheet-table">'
         + f"<colgroup>{colgroup_html}</colgroup>"
@@ -131,3 +165,15 @@ def _render_worksheet_page(sheet, visible_range: str) -> str:
         + "</div>"
         + "</section>"
     )
+
+
+def _effective_print_scale(sheet, *, screen_width: float, screen_height: float, print_width: float) -> float:
+    if screen_width <= 0:
+        return 1.0
+
+    width_scale = min(print_width / screen_width, 1.0)
+    if not worksheet_uses_fit_to_height(sheet) or screen_height <= 0:
+        return width_scale
+
+    height_scale = min(printable_height_mm(sheet) / screen_height, 1.0)
+    return min(width_scale, height_scale, 1.0)

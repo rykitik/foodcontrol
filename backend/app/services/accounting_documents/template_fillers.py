@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from copy import copy
+
 from openpyxl.cell.cell import MergedCell
 from openpyxl.styles import Alignment, Border
 from openpyxl.utils import column_index_from_string, get_column_letter
@@ -25,6 +27,7 @@ def populate_cost_statement_worksheet(
 ) -> None:
     _assert_capacity(len(payload["rows"]), config.capacity, "ведомости")
     _apply_column_width_contract(worksheet, config.column_width_contract)
+    _merge_cost_statement_requisite_text_fields(worksheet)
 
     worksheet[config.month_cell] = russian_month_name(payload["period_start"])
     worksheet[config.year_cell] = _year_label(payload["year"])
@@ -105,6 +108,7 @@ def populate_meal_sheet_worksheet(
 
     _hide_rows(worksheet, current_row, config.count_row - 1)
     _hide_empty_tail_columns(worksheet, config, day_slots, len(payload["days"]))
+    _hide_trailing_columns_after_total(worksheet, config)
     worksheet[config.institution_cell] = payload["form_metadata"]["institution"]
     _clear_footer_borders(
         worksheet,
@@ -234,12 +238,18 @@ def _normalize_day_slot_widths(
 
 def _protect_meal_sheet_period_header(worksheet: Worksheet, config: MealSheetTemplateConfig) -> None:
     month_cell = worksheet[config.month_cell]
-    month_cell.alignment = Alignment(
-        horizontal=month_cell.alignment.horizontal or "center",
-        vertical=month_cell.alignment.vertical or "center",
-        wrap_text=True,
-        shrink_to_fit=True,
-    )
+    month_alignment = copy(month_cell.alignment)
+    month_alignment.horizontal = month_alignment.horizontal or "center"
+    month_alignment.vertical = month_alignment.vertical or "center"
+    month_alignment.wrap_text = True
+    month_alignment.shrink_to_fit = False
+    month_cell.alignment = month_alignment
+
+    for cell_ref in (config.year_cell, config.institution_cell):
+        cell = worksheet[cell_ref]
+        alignment = copy(cell.alignment)
+        alignment.shrink_to_fit = False
+        cell.alignment = alignment
 
 
 def _protect_meal_sheet_day_slots(
@@ -252,11 +262,17 @@ def _protect_meal_sheet_day_slots(
             continue
         for row_index in range(config.header_day_row, config.amount_row + 1):
             cell = worksheet[f"{column_letter}{row_index}"]
-            cell.alignment = Alignment(
-                horizontal=cell.alignment.horizontal or "center",
-                vertical=cell.alignment.vertical or "center",
-                shrink_to_fit=True,
-            )
+            alignment = copy(cell.alignment)
+            alignment.horizontal = alignment.horizontal or "center"
+            alignment.vertical = alignment.vertical or "center"
+            alignment.shrink_to_fit = False
+            cell.alignment = alignment
+
+
+def _merge_cost_statement_requisite_text_fields(worksheet: Worksheet) -> None:
+    for range_string in ("C9:G9", "C15:G15"):
+        if range_string not in {str(merged_range) for merged_range in worksheet.merged_cells.ranges}:
+            worksheet.merge_cells(range_string)
 
 
 def _apply_column_width_contract(worksheet: Worksheet, contract: ColumnWidthContract) -> None:
@@ -340,6 +356,16 @@ def _hide_empty_tail_columns(
         column_index_from_string(last_used_day_column) + 1,
         column_index_from_string(config.total_column),
     ):
+        column_letter = get_column_letter(column_index)
+        if _column_has_values(worksheet, column_letter, config.header_day_row, config.amount_row):
+            continue
+        worksheet.column_dimensions[column_letter].hidden = True
+
+
+def _hide_trailing_columns_after_total(worksheet: Worksheet, config: MealSheetTemplateConfig) -> None:
+    _, _, max_col, _ = range_boundaries(config.visible_range)
+    total_column_index = column_index_from_string(config.total_column)
+    for column_index in range(total_column_index + 1, max_col + 1):
         column_letter = get_column_letter(column_index)
         if _column_has_values(worksheet, column_letter, config.header_day_row, config.amount_row):
             continue

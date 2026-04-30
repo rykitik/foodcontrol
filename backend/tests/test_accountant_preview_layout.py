@@ -186,3 +186,61 @@ def test_preview_right_aligned_cell_without_overflow_has_no_content_span_style()
     assert "text-align:right" in html
     assert "data-accounting-overflow" not in html
     assert "<span style=" not in html
+
+
+def test_preview_print_exposes_scaled_columns_rows_and_fonts():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.page_setup.orientation = "landscape"
+    sheet.page_setup.paperSize = "9"
+    sheet.page_setup.fitToWidth = 1
+    sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.page_margins.left = 0.25
+    sheet.page_margins.right = 0.25
+
+    for column_index in range(1, 12):
+        sheet.column_dimensions[chr(64 + column_index)].width = 20
+        sheet.cell(row=1, column=column_index).value = f"header {column_index}"
+
+    html = _render_worksheet_page(sheet, "A1:K1")
+
+    scale_match = re.search(r'data-print-scale="([0-9.]+)"', html)
+    assert scale_match is not None
+    assert float(scale_match.group(1)) < 1
+    assert "--accounting-screen-height:" in html
+    assert "--accounting-print-height:" in html
+    assert "--accounting-print-scale:" in html
+    assert "--accounting-screen-row-height:" in html
+    assert "--accounting-print-row-height:" in html
+    assert "--accounting-print-col-width:" in html
+    assert "--accounting-cell-font-size:" in html
+    assert "--accounting-print-font-size:" in html
+
+
+def test_preview_print_scale_ignores_height_without_fit_to_height():
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.page_setup.orientation = "landscape"
+    sheet.page_setup.paperSize = "9"
+    sheet.page_setup.fitToWidth = 1
+    sheet.page_setup.fitToHeight = 0
+    sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.page_margins.left = 0.25
+    sheet.page_margins.right = 0.25
+    sheet.page_margins.top = 0.25
+    sheet.page_margins.bottom = 0.25
+
+    for column_index in range(1, 9):
+        sheet.column_dimensions[chr(64 + column_index)].width = 20
+    for row_index in range(1, 121):
+        sheet.cell(row=row_index, column=1).value = f"row {row_index}"
+
+    width_only_html = _render_worksheet_page(sheet, "A1:H120")
+    width_only_scale = float(re.search(r'data-print-scale="([0-9.]+)"', width_only_html).group(1))
+
+    sheet.page_setup.fitToHeight = 1
+    single_page_html = _render_worksheet_page(sheet, "A1:H120")
+    single_page_scale = float(re.search(r'data-print-scale="([0-9.]+)"', single_page_html).group(1))
+
+    assert width_only_scale < 1
+    assert single_page_scale < width_only_scale

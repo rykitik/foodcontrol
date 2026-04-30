@@ -1,7 +1,11 @@
 import {
+  downloadAccountingCombinedMealSheetPdf,
   downloadAccountingCombinedMealSheetXlsx,
+  downloadAccountingCostCalculationPdf,
   downloadAccountingCostCalculationXlsx,
+  downloadAccountingCostStatementPdf,
   downloadAccountingCostStatementXlsx,
+  downloadAccountingMealSheetPdf,
   downloadAccountingMealSheetXlsx,
   getAccountingCombinedMealSheetDocument,
   getAccountingCostCalculationDocument,
@@ -23,6 +27,7 @@ import {
 } from '@/utils/accountingDocumentNames'
 import { saveBlob } from '@/utils/files'
 import { printDocument } from '@/utils/printDocument'
+import { printPdfBlob } from '@/utils/printPdf'
 import type {
   AccountingCombinedMealSheetRequest,
   AccountingCostCalculationRequest,
@@ -59,7 +64,32 @@ export async function loadAccountingDocument(
   return await getAccountingCostStatementDocument(buildCostStatementRequest(document, context), context.token)
 }
 
-export function printAccountingDocument(document: AccountantDocumentItem, printableDocument: PrintableDocument): string {
+export async function printAccountingDocument(
+  document: AccountantDocumentItem,
+  printableDocument: PrintableDocument,
+  context: AccountantDocumentActionContext,
+): Promise<string> {
+  let pdfFallbackNotice: string | null = null
+
+  if (printableDocument.pdf_available) {
+    try {
+      const blob = await loadAccountingDocumentPdf(document, context)
+      if (printPdfBlob(blob)) {
+        return printAccountingDocumentMessage(document, true)
+      }
+      pdfFallbackNotice = 'PDF не удалось открыть, использована HTML-печать.'
+    } catch {
+      pdfFallbackNotice = 'PDF не удалось сформировать, использована HTML-печать.'
+    }
+  } else {
+    pdfFallbackNotice = 'PDF-печать недоступна, использована HTML-печать.'
+  }
+
+  const htmlPrintMessage = printAccountingDocumentHtml(document, printableDocument)
+  return pdfFallbackNotice ? `${pdfFallbackNotice} ${htmlPrintMessage}` : htmlPrintMessage
+}
+
+function printAccountingDocumentHtml(document: AccountantDocumentItem, printableDocument: PrintableDocument): string {
   if (!printDocument(printableDocument)) {
     throw new Error('Не удалось открыть окно печати')
   }
@@ -77,6 +107,42 @@ export function printAccountingDocument(document: AccountantDocumentItem, printa
   }
 
   return `Открыта печатная форма ведомости стоимости: ${document.categoryName}`
+}
+
+function printAccountingDocumentMessage(document: AccountantDocumentItem, pdf: boolean): string {
+  const target = pdf ? 'PDF' : 'печатная форма'
+  if (document.kind === 'meal_sheet') {
+    return `Открыт ${target} табеля: ${mealTypeLabels[document.mealType]}, ${document.categoryName}`
+  }
+
+  if (document.kind === 'combined_meal_sheet') {
+    return `Открыт ${target} общего табеля: ${document.categoryName}`
+  }
+
+  if (document.kind === 'cost_calculation') {
+    return `Открыт ${target} расчёта стоимости: ${document.categoryName}`
+  }
+
+  return `Открыт ${target} ведомости стоимости: ${document.categoryName}`
+}
+
+async function loadAccountingDocumentPdf(
+  document: AccountantDocumentItem,
+  context: AccountantDocumentActionContext,
+): Promise<Blob> {
+  if (document.kind === 'meal_sheet') {
+    return await downloadAccountingMealSheetPdf(buildMealSheetRequest(document, context), context.token)
+  }
+
+  if (document.kind === 'combined_meal_sheet') {
+    return await downloadAccountingCombinedMealSheetPdf(buildCombinedMealSheetRequest(document, context), context.token)
+  }
+
+  if (document.kind === 'cost_calculation') {
+    return await downloadAccountingCostCalculationPdf(buildCostCalculationRequest(document, context), context.token)
+  }
+
+  return await downloadAccountingCostStatementPdf(buildCostStatementRequest(document, context), context.token)
 }
 
 export async function downloadAccountingDocument(

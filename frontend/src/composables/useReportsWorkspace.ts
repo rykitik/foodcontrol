@@ -284,14 +284,18 @@ export function useReportsWorkspace(options: ReportsWorkspaceOptions = {}) {
     await openDocumentPreview(document)
   }
 
-  function handleSelectedDocumentPrint() {
+  async function handleSelectedDocumentPrint() {
     if (!selectedDocument.value || !previewDocument.value) {
       return
     }
 
     resetAlerts()
     try {
-      successMessage.value = printAccountingDocument(selectedDocument.value, previewDocument.value)
+      successMessage.value = await printAccountingDocument(selectedDocument.value, previewDocument.value, {
+        month: month.value,
+        year: year.value,
+        token: requireAuthToken(),
+      })
     } catch (error) {
       errorMessage.value =
         error instanceof Error ? error.message : 'Не удалось открыть печатную форму'

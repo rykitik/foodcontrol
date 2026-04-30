@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import copy
 from dataclasses import dataclass
 from typing import Literal
 
@@ -42,6 +43,9 @@ class CombinedMealSheetConfig:
     institution_cell: str = INSTITUTION_CELL
     document_type: Literal["combined_meal_sheet"] = "combined_meal_sheet"
     page_orientation: Literal["landscape"] = "landscape"
+    fit_to_width: bool = True
+    fit_to_height: bool = False
+    fit_to_single_page: bool = False
 
 
 def build_combined_meal_sheet_workbook(payload: dict) -> tuple[Workbook, CombinedMealSheetConfig]:
@@ -73,16 +77,19 @@ def build_combined_meal_sheet_workbook(payload: dict) -> tuple[Workbook, Combine
 
 
 def _setup_page(worksheet, config: CombinedMealSheetConfig) -> None:
+    fit_to_width = config.fit_to_width or config.fit_to_single_page
+    fit_to_height = config.fit_to_height or config.fit_to_single_page
     worksheet.print_area = config.visible_range
     worksheet.page_setup.orientation = "landscape"
     worksheet.page_setup.paperSize = "9"
-    worksheet.page_setup.fitToWidth = 1
-    worksheet.page_setup.fitToHeight = 0
-    worksheet.sheet_properties.pageSetUpPr.fitToPage = True
-    worksheet.page_margins.left = 0.25
-    worksheet.page_margins.right = 0.25
-    worksheet.page_margins.top = 0.35
-    worksheet.page_margins.bottom = 0.35
+    worksheet.page_setup.fitToWidth = 1 if fit_to_width else 0
+    worksheet.page_setup.fitToHeight = 1 if fit_to_height else 0
+    worksheet.page_setup.scale = None
+    worksheet.sheet_properties.pageSetUpPr.fitToPage = fit_to_width or fit_to_height
+    worksheet.page_margins.left = 0.2
+    worksheet.page_margins.right = 0.2
+    worksheet.page_margins.top = 0.25
+    worksheet.page_margins.bottom = 0.25
     worksheet.page_margins.header = 0.1
     worksheet.page_margins.footer = 0.1
     worksheet.print_title_rows = f"{TITLE_ROW}:{PRICE_ROW}"
@@ -222,8 +229,9 @@ def _style_document(worksheet, signature_row: int) -> None:
         worksheet[cell_ref].font = header_font
     worksheet[MONTH_CELL].font = Font(name="Arial", size=14, bold=True, color="0033CC")
     worksheet[TITLE_CELL].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    worksheet[MONTH_CELL].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True)
+    worksheet[MONTH_CELL].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
     worksheet[MONTH_CELL].border = Border(bottom=thin)
+    worksheet[YEAR_CELL].alignment = Alignment(horizontal="right", vertical="center")
     worksheet[INSTITUTION_CELL].font = Font(name="Arial", size=12, bold=True)
     worksheet[INSTITUTION_CELL].alignment = Alignment(horizontal="right", vertical="center")
     worksheet.row_dimensions[TITLE_ROW].height = 32.25
@@ -254,7 +262,7 @@ def _style_document(worksheet, signature_row: int) -> None:
         worksheet[f"D{row_index}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         worksheet.row_dimensions[row_index].height = 18
 
-    _shrink_day_columns(worksheet, signature_row)
+    _protect_day_columns(worksheet, signature_row)
 
     for row_index in range(signature_row - 4, signature_row - 1):
         for cell in worksheet[row_index]:
@@ -270,17 +278,18 @@ def _style_document(worksheet, signature_row: int) -> None:
     worksheet.row_dimensions[signature_row].height = 24
 
 
-def _shrink_day_columns(worksheet, signature_row: int) -> None:
+def _protect_day_columns(worksheet, signature_row: int) -> None:
     for column_index in range(DAY_COLUMN_START, DAY_COLUMN_START + MAX_DAY_COUNT):
         column_letter = get_column_letter(column_index)
         if worksheet.column_dimensions[column_letter].hidden:
             continue
         for row_index in range(HEADER_ROW, signature_row - 1):
-            worksheet[f"{column_letter}{row_index}"].alignment = Alignment(
-                horizontal="center",
-                vertical="center",
-                shrink_to_fit=True,
-            )
+            cell = worksheet[f"{column_letter}{row_index}"]
+            alignment = copy(cell.alignment)
+            alignment.horizontal = alignment.horizontal or "center"
+            alignment.vertical = alignment.vertical or "center"
+            alignment.shrink_to_fit = False
+            cell.alignment = alignment
 
 
 def _safe_sheet_title(value: str) -> str:

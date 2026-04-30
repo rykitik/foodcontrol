@@ -64,6 +64,20 @@ export async function downloadAccountingMealSheetXlsx(
   )
 }
 
+export async function downloadAccountingMealSheetPdf(
+  request: AccountingMealSheetRequest,
+  token?: string | null,
+): Promise<Blob> {
+  return requestBlob('/reports/accounting-documents/meal-sheet/pdf', {
+    method: 'POST',
+    headers: {
+      ...authHeaders(token),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  })
+}
+
 export async function getAccountingCombinedMealSheetDocument(
   request: AccountingCombinedMealSheetRequest,
   token?: string | null,
@@ -95,6 +109,20 @@ export async function downloadAccountingCombinedMealSheetXlsx(
     },
     () => mock.downloadAccountingCombinedMealSheetXlsx(request, token),
   )
+}
+
+export async function downloadAccountingCombinedMealSheetPdf(
+  request: AccountingCombinedMealSheetRequest,
+  token?: string | null,
+): Promise<Blob> {
+  return requestBlob('/reports/accounting-documents/combined-meal-sheet/pdf', {
+    method: 'POST',
+    headers: {
+      ...authHeaders(token),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  })
 }
 
 export async function getAccountingCostStatementDocument(
@@ -130,6 +158,20 @@ export async function downloadAccountingCostStatementXlsx(
   )
 }
 
+export async function downloadAccountingCostStatementPdf(
+  request: AccountingCostStatementRequest,
+  token?: string | null,
+): Promise<Blob> {
+  return requestBlob('/reports/accounting-documents/cost-statement/pdf', {
+    method: 'POST',
+    headers: {
+      ...authHeaders(token),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  })
+}
+
 export async function getAccountingCostCalculationDocument(
   request: AccountingCostCalculationRequest,
   token?: string | null,
@@ -161,6 +203,20 @@ export async function downloadAccountingCostCalculationXlsx(
     },
     () => mock.downloadAccountingCostCalculationXlsx(request, token),
   )
+}
+
+export async function downloadAccountingCostCalculationPdf(
+  request: AccountingCostCalculationRequest,
+  token?: string | null,
+): Promise<Blob> {
+  return requestBlob('/reports/accounting-documents/cost-calculation/pdf', {
+    method: 'POST',
+    headers: {
+      ...authHeaders(token),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  })
 }
 
 export async function saveAccountingDocumentMetadata(

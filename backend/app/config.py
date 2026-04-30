@@ -62,6 +62,10 @@ class Config:
     SESSION_TIMEOUT = 900
     JSON_AS_ASCII = False
     MEAL_HOLIDAYS = os.environ.get("MEAL_HOLIDAYS", "")
+    ACCOUNTING_PDF_ENABLED = env_bool("ACCOUNTING_PDF_ENABLED", False)
+    LIBREOFFICE_BIN = os.environ.get("LIBREOFFICE_BIN", "soffice")
+    ACCOUNTING_PDF_TIMEOUT_SECONDS = env_int("ACCOUNTING_PDF_TIMEOUT_SECONDS", 30)
+    ACCOUNTING_PDF_MAX_AUTO_SCALE = env_int("ACCOUNTING_PDF_MAX_AUTO_SCALE", 125)
 
     @staticmethod
     def init_app(app) -> None:

@@ -96,6 +96,9 @@ class MealSheetTemplateConfig:
     student_header_cell: str | None = "B9"
     document_type: Literal["meal_sheet"] = "meal_sheet"
     page_orientation: Literal["landscape"] = "landscape"
+    fit_to_width: bool = True
+    fit_to_height: bool = False
+    fit_to_single_page: bool = False
     title_cell: str = "A7"
     month_cell: str = "S7"
     year_cell: str = "V7"

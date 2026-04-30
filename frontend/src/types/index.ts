@@ -184,6 +184,7 @@ export interface PrintableDocument {
   html: string
   print_mode?: 'standard' | 'embedded'
   page_orientation?: 'portrait' | 'landscape'
+  pdf_available?: boolean
   editable_metadata?: AccountingDocumentMetadataFieldDefinition[]
 }
 

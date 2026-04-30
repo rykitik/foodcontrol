@@ -100,6 +100,14 @@ export function downloadAccountingMealSheetXlsx(
   })
 }
 
+export function downloadAccountingMealSheetPdf(
+  request: AccountingMealSheetRequest,
+  token?: string | null,
+): Blob {
+  requireUser(token)
+  return mockPdfBlob(`Meal sheet PDF ${request.category_id} ${request.meal_type}`)
+}
+
 export function getAccountingCombinedMealSheetDocument(
   request: AccountingCombinedMealSheetRequest,
   token?: string | null,
@@ -155,6 +163,14 @@ export function downloadAccountingCombinedMealSheetXlsx(
   })
 }
 
+export function downloadAccountingCombinedMealSheetPdf(
+  request: AccountingCombinedMealSheetRequest,
+  token?: string | null,
+): Blob {
+  requireUser(token)
+  return mockPdfBlob(`Combined meal sheet PDF ${request.category_id}`)
+}
+
 export function getAccountingCostStatementDocument(
   request: AccountingCostStatementRequest,
   token?: string | null,
@@ -206,6 +222,14 @@ export function downloadAccountingCostStatementXlsx(
   return new Blob([`Cost statement ${request.category_id}`], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
+}
+
+export function downloadAccountingCostStatementPdf(
+  request: AccountingCostStatementRequest,
+  token?: string | null,
+): Blob {
+  requireUser(token)
+  return mockPdfBlob(`Cost statement PDF ${request.category_id}`)
 }
 
 export function getAccountingCostCalculationDocument(
@@ -261,6 +285,14 @@ export function downloadAccountingCostCalculationXlsx(
   return new Blob([`Cost calculation ${request.category_id}`], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
+}
+
+export function downloadAccountingCostCalculationPdf(
+  request: AccountingCostCalculationRequest,
+  token?: string | null,
+): Blob {
+  requireUser(token)
+  return mockPdfBlob(`Cost calculation PDF ${request.category_id}`)
 }
 
 export function saveAccountingDocumentMetadata(
@@ -359,4 +391,8 @@ function resolveMockAccountingDocument(
     },
     token,
   )
+}
+
+function mockPdfBlob(label: string): Blob {
+  return new Blob([`%PDF-1.4\n% ${label}\n%%EOF`], { type: 'application/pdf' })
 }

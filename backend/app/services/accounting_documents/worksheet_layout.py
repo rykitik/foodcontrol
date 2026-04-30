@@ -152,7 +152,7 @@ def worksheet_widths(
 ) -> tuple[dict[int, float], dict[int, float], float, float, float]:
     screen_column_widths = {index: _column_width_mm(sheet, index) for index in visible_columns}
     screen_width = sum(screen_column_widths.values())
-    printable_width = _printable_width_mm(sheet)
+    printable_width = printable_width_mm(sheet)
     print_width = _target_print_width_mm(sheet, screen_width, printable_width)
 
     if screen_width <= 0:
@@ -191,6 +191,40 @@ def _column_width_mm(sheet, column_index: int) -> float:
     return pixels * MM_PER_INCH / 96
 
 
+def worksheet_print_area_width_mm(sheet) -> float:
+    ranges = worksheet_print_area_ranges(sheet)
+    if not ranges:
+        ranges = (sheet.calculate_dimension(),)
+
+    return max((_range_width_mm(sheet, range_string) for range_string in ranges), default=0.0)
+
+
+def worksheet_print_area_ranges(sheet) -> tuple[str, ...]:
+    print_area = sheet.print_area
+    if not print_area:
+        return ()
+
+    raw_ranges = print_area if isinstance(print_area, (list, tuple)) else str(print_area).split(",")
+    normalized_ranges: list[str] = []
+    for raw_range in raw_ranges:
+        range_string = str(raw_range).replace("$", "").strip()
+        if not range_string:
+            continue
+        if "!" in range_string:
+            range_string = range_string.split("!", 1)[1]
+        normalized_ranges.append(range_string.strip("'"))
+    return tuple(normalized_ranges)
+
+
+def _range_width_mm(sheet, range_string: str) -> float:
+    min_col, _, max_col, _ = range_boundaries(range_string)
+    return sum(
+        _column_width_mm(sheet, column_index)
+        for column_index in range(min_col, max_col + 1)
+        if not sheet.column_dimensions[get_column_letter(column_index)].hidden
+    )
+
+
 def _target_print_width_mm(sheet, raw_total_width: float, printable_width: float) -> float:
     if raw_total_width <= 0:
         return printable_width
@@ -206,12 +240,20 @@ def _target_print_width_mm(sheet, raw_total_width: float, printable_width: float
     return max(min(scaled_width, printable_width), 1.0)
 
 
-def _printable_width_mm(sheet) -> float:
-    page_width_mm, _ = _page_size_mm(sheet.page_setup.paperSize, sheet.page_setup.orientation)
+def printable_width_mm(sheet, *, orientation: str | None = None) -> float:
+    page_width_mm, _ = _page_size_mm(sheet.page_setup.paperSize, orientation or sheet.page_setup.orientation)
     margins = sheet.page_margins
     left_margin_mm = (margins.left or 0.7) * MM_PER_INCH
     right_margin_mm = (margins.right or 0.7) * MM_PER_INCH
     return max(page_width_mm - left_margin_mm - right_margin_mm, 1.0)
+
+
+def printable_height_mm(sheet, *, orientation: str | None = None) -> float:
+    _, page_height_mm = _page_size_mm(sheet.page_setup.paperSize, orientation or sheet.page_setup.orientation)
+    margins = sheet.page_margins
+    top_margin_mm = (margins.top or 0.75) * MM_PER_INCH
+    bottom_margin_mm = (margins.bottom or 0.75) * MM_PER_INCH
+    return max(page_height_mm - top_margin_mm - bottom_margin_mm, 1.0)
 
 
 def _page_size_mm(paper_size, orientation: str | None) -> tuple[float, float]:
@@ -250,5 +292,16 @@ def _worksheet_uses_fit_to_width(sheet) -> bool:
 
     try:
         return int(fit_to_width) > 0
+    except (TypeError, ValueError):
+        return False
+
+
+def worksheet_uses_fit_to_height(sheet) -> bool:
+    fit_to_height = sheet.page_setup.fitToHeight
+    if fit_to_height in {None, ""}:
+        return False
+
+    try:
+        return int(fit_to_height) > 0
     except (TypeError, ValueError):
         return False

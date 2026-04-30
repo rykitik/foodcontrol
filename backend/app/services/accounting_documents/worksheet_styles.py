@@ -6,7 +6,12 @@ from xml.etree import ElementTree
 from openpyxl.styles.colors import COLOR_INDEX
 
 
-def render_worksheet_cell_style(cell, *, allow_overflow: bool) -> str:
+def render_worksheet_cell_style(
+    cell,
+    *,
+    allow_overflow: bool,
+    print_scale: float | None = None,
+) -> str:
     workbook = cell.parent.parent
     styles = [
         "box-sizing:border-box",
@@ -54,7 +59,10 @@ def render_worksheet_cell_style(cell, *, allow_overflow: bool) -> str:
         if font.name:
             styles.append(f"font-family:{_css_font_family(font.name)}")
         if font.sz:
-            styles.append(f"font-size:{font.sz}pt")
+            styles.append(f"--accounting-cell-font-size:{font.sz}pt")
+            if print_scale is not None and print_scale < 1:
+                styles.append(f"--accounting-print-font-size:{float(font.sz) * print_scale:.4f}pt")
+            styles.append("font-size:var(--accounting-cell-font-size)")
         styles.append(f"font-weight:{700 if font.bold else 400}")
         if font.italic:
             styles.append("font-style:italic")

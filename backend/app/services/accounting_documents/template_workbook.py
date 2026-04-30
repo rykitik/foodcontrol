@@ -7,7 +7,7 @@ from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell.cell import MergedCell
-from openpyxl.utils import get_column_letter
+from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl.utils.cell import range_boundaries
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -57,6 +57,7 @@ def build_meal_sheet_template_workbook(payload: dict) -> tuple[Workbook, MealShe
     _prepare_template_worksheet(worksheet, config)
     populate_meal_sheet_worksheet(worksheet, payload, config)
     workbook = _crop_to_visible_workbook(worksheet, config.visible_range)
+    _configure_meal_sheet_print_page(workbook.active, config)
     workbook.active.title = _safe_sheet_title(_worksheet_title(payload, "meal_sheet"))
     return workbook, config
 
@@ -66,6 +67,31 @@ def save_workbook_bytes(workbook: Workbook) -> bytes:
     workbook.save(buffer)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def _configure_meal_sheet_print_page(worksheet: Worksheet, config: MealSheetTemplateConfig) -> None:
+    fit_to_width = config.fit_to_width or config.fit_to_single_page
+    fit_to_height = config.fit_to_height or config.fit_to_single_page
+    worksheet.print_area = _meal_sheet_print_area(config)
+    worksheet.page_setup.orientation = config.page_orientation
+    worksheet.page_setup.paperSize = "9"
+    worksheet.page_setup.fitToWidth = 1 if fit_to_width else 0
+    worksheet.page_setup.fitToHeight = 1 if fit_to_height else 0
+    worksheet.page_setup.scale = None
+    worksheet.sheet_properties.pageSetUpPr.fitToPage = fit_to_width or fit_to_height
+    worksheet.page_margins.left = 0.2
+    worksheet.page_margins.right = 0.2
+    worksheet.page_margins.top = 0.25
+    worksheet.page_margins.bottom = 0.25
+    worksheet.page_margins.header = 0.1
+    worksheet.page_margins.footer = 0.1
+
+
+def _meal_sheet_print_area(config: MealSheetTemplateConfig) -> str:
+    min_col, min_row, max_col, max_row = range_boundaries(config.visible_range)
+    total_column_index = column_index_from_string(config.total_column)
+    print_max_col = min(max_col, total_column_index)
+    return f"{get_column_letter(min_col)}{min_row}:{get_column_letter(print_max_col)}{max_row}"
 
 
 def _load_template_sheet(sheet_name: str, visible_range: str) -> Worksheet:
