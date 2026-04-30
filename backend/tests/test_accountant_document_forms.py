@@ -964,6 +964,7 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
     )
     assert month_cell_html is not None
     assert "color:#0033cc" in month_cell_html.group(0)
+    assert "white-space:pre-wrap" in month_cell_html.group(0)
 
     print_width, printable_width = extract_print_metrics(payload["html"])
     assert print_width <= printable_width + 0.01
@@ -981,6 +982,7 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
     assert sheet[COMBINED_MEAL_SHEET_PERIOD_PREFIX_CELL].value == "за "
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].value == russian_month_name(prepared["service_day"])
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].alignment.horizontal == "center"
+    assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].alignment.wrap_text is True
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].font.color.rgb == "000033CC"
     assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].border.bottom.style == "thin"
     assert sheet[COMBINED_MEAL_SHEET_YEAR_CELL].value == f"{prepared['year']} г."
@@ -990,6 +992,7 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
         header_row=COMBINED_MEAL_SHEET_HEADER_ROW,
         day_number=prepared["service_day"].day,
     )
+    assert sheet[f"{day_column}{COMBINED_MEAL_SHEET_HEADER_ROW}"].alignment.shrink_to_fit is True
     student_row = find_student_row(sheet, student_name)
     assert sheet[f"{day_column}{student_row}"].value == "З/О"
     assert sheet[f"{BREAKFAST_TOTAL_COLUMN}{student_row}"].value == 1
@@ -1032,6 +1035,11 @@ def test_accountant_meal_sheet_normalizes_day_column_widths(client, category_id:
     assert max(widths) - min(widths) < 0.01
     assert config.day_slot_width is not None
     assert all(abs(width - config.day_slot_width) < 0.01 for width in widths)
+    assert sheet[config.month_cell].alignment.wrap_text is True
+
+    first_day_column = find_day_column(sheet, header_row=config.header_day_row, day_number=1)
+    assert sheet[f"{first_day_column}{config.header_day_row}"].alignment.shrink_to_fit is True
+    assert sheet[f"{first_day_column}{config.meal_label_row}"].alignment.shrink_to_fit is True
 
 
 @pytest.mark.parametrize(
@@ -1087,9 +1095,15 @@ def test_accountant_meal_sheet_institution_binding_uses_source_cell(
     metadata = editable_metadata_by_key(payload)
     _, sheet = workbook_from_response(workbook_response)
     institution_cell = resolve_meal_sheet_institution_cell(sheet, config)
+    month_cell_html = re.search(
+        rf'<td(?=[^>]*data-accounting-cell="{config.month_cell}")[^>]*>',
+        payload["html"],
+    )
 
     assert config.institution_cell == template_cell
     assert institution_cell == template_cell
+    assert month_cell_html is not None
+    assert "white-space:pre-wrap" in month_cell_html.group(0)
     assert metadata["institution"]["cell"] == template_cell
     assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, template_cell)
     assert workbook_cell_display_value(sheet, template_cell) == "МЦК - ЧЭМК Минобразования Чувашии"

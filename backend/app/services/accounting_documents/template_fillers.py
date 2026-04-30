@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from openpyxl.cell.cell import MergedCell
-from openpyxl.styles import Border
+from openpyxl.styles import Alignment, Border
 from openpyxl.utils import column_index_from_string, get_column_letter
 from openpyxl.utils.cell import range_boundaries
 from openpyxl.worksheet.worksheet import Worksheet
@@ -67,6 +67,7 @@ def populate_meal_sheet_worksheet(
     worksheet[config.month_cell] = russian_month_name(payload["period_start"])
     worksheet[config.year_cell] = _year_label(payload["year"])
     worksheet[config.title_cell] = payload["title"]
+    _protect_meal_sheet_period_header(worksheet, config)
     if config.student_header_cell is not None:
         worksheet[config.student_header_cell] = _meal_sheet_student_header_text(payload, config)
     if config.price_label_cell is not None:
@@ -84,6 +85,7 @@ def populate_meal_sheet_worksheet(
         worksheet[f"{column_letter}{config.meal_label_row}"] = payload["meal_type_label"]
         worksheet[f"{column_letter}{config.price_row}"] = payload["day_prices"][day_payload["iso"]]
 
+    _protect_meal_sheet_day_slots(worksheet, config, day_slots)
     _hide_non_day_columns_between_slots(worksheet, config, day_slots)
 
     current_row = config.data_start_row
@@ -228,6 +230,33 @@ def _normalize_day_slot_widths(
 
     for column_letter in day_slots:
         worksheet.column_dimensions[column_letter].width = normalized_width
+
+
+def _protect_meal_sheet_period_header(worksheet: Worksheet, config: MealSheetTemplateConfig) -> None:
+    month_cell = worksheet[config.month_cell]
+    month_cell.alignment = Alignment(
+        horizontal=month_cell.alignment.horizontal or "center",
+        vertical=month_cell.alignment.vertical or "center",
+        wrap_text=True,
+        shrink_to_fit=True,
+    )
+
+
+def _protect_meal_sheet_day_slots(
+    worksheet: Worksheet,
+    config: MealSheetTemplateConfig,
+    day_slots: list[str],
+) -> None:
+    for column_letter in day_slots:
+        if worksheet.column_dimensions[column_letter].hidden:
+            continue
+        for row_index in range(config.header_day_row, config.amount_row + 1):
+            cell = worksheet[f"{column_letter}{row_index}"]
+            cell.alignment = Alignment(
+                horizontal=cell.alignment.horizontal or "center",
+                vertical=cell.alignment.vertical or "center",
+                shrink_to_fit=True,
+            )
 
 
 def _apply_column_width_contract(worksheet: Worksheet, contract: ColumnWidthContract) -> None:

@@ -14,6 +14,7 @@ TITLE_ROW = 7
 SPACER_ROW = 8
 DAY_COLUMN_START = 5
 MAX_DAY_COUNT = 31
+DAY_COLUMN_WIDTH = 3.0
 BREAKFAST_TOTAL_COLUMN = "AJ"
 LUNCH_TOTAL_COLUMN = "AK"
 AMOUNT_TOTAL_COLUMN = "AL"
@@ -24,8 +25,8 @@ PERIOD_PREFIX_CELL = f"Q{TITLE_ROW}"
 PERIOD_PREFIX_MERGE_RANGE = f"Q{TITLE_ROW}:R{TITLE_ROW}"
 MONTH_CELL = f"S{TITLE_ROW}"
 MONTH_MERGE_RANGE = f"S{TITLE_ROW}:X{TITLE_ROW}"
-YEAR_CELL = f"Y{TITLE_ROW}"
-YEAR_MERGE_RANGE = f"Y{TITLE_ROW}:AA{TITLE_ROW}"
+YEAR_CELL = f"AB{TITLE_ROW}"
+YEAR_MERGE_RANGE = f"AB{TITLE_ROW}:AF{TITLE_ROW}"
 INSTITUTION_CELL = f"A{SPACER_ROW}"
 INSTITUTION_MERGE_RANGE = f"A{SPACER_ROW}:{AMOUNT_TOTAL_COLUMN}{SPACER_ROW}"
 HEADER_ROW = 9
@@ -104,7 +105,7 @@ def _setup_columns(worksheet, payload: dict) -> None:
     active_day_count = len(payload["days"])
     for offset in range(MAX_DAY_COUNT):
         column_letter = get_column_letter(DAY_COLUMN_START + offset)
-        worksheet.column_dimensions[column_letter].width = 2.2
+        worksheet.column_dimensions[column_letter].width = DAY_COLUMN_WIDTH
         worksheet.column_dimensions[column_letter].hidden = offset >= active_day_count
 
 
@@ -221,7 +222,7 @@ def _style_document(worksheet, signature_row: int) -> None:
         worksheet[cell_ref].font = header_font
     worksheet[MONTH_CELL].font = Font(name="Arial", size=14, bold=True, color="0033CC")
     worksheet[TITLE_CELL].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-    worksheet[MONTH_CELL].alignment = Alignment(horizontal="center", vertical="center")
+    worksheet[MONTH_CELL].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True, shrink_to_fit=True)
     worksheet[MONTH_CELL].border = Border(bottom=thin)
     worksheet[INSTITUTION_CELL].font = Font(name="Arial", size=12, bold=True)
     worksheet[INSTITUTION_CELL].alignment = Alignment(horizontal="right", vertical="center")
@@ -253,6 +254,8 @@ def _style_document(worksheet, signature_row: int) -> None:
         worksheet[f"D{row_index}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
         worksheet.row_dimensions[row_index].height = 18
 
+    _shrink_day_columns(worksheet, signature_row)
+
     for row_index in range(signature_row - 4, signature_row - 1):
         for cell in worksheet[row_index]:
             cell.font = Font(name="Arial", size=8, bold=True)
@@ -265,6 +268,19 @@ def _style_document(worksheet, signature_row: int) -> None:
     signature_cell.font = Font(name="Arial", size=10)
     signature_cell.alignment = Alignment(horizontal="left", vertical="center")
     worksheet.row_dimensions[signature_row].height = 24
+
+
+def _shrink_day_columns(worksheet, signature_row: int) -> None:
+    for column_index in range(DAY_COLUMN_START, DAY_COLUMN_START + MAX_DAY_COUNT):
+        column_letter = get_column_letter(column_index)
+        if worksheet.column_dimensions[column_letter].hidden:
+            continue
+        for row_index in range(HEADER_ROW, signature_row - 1):
+            worksheet[f"{column_letter}{row_index}"].alignment = Alignment(
+                horizontal="center",
+                vertical="center",
+                shrink_to_fit=True,
+            )
 
 
 def _safe_sheet_title(value: str) -> str:
