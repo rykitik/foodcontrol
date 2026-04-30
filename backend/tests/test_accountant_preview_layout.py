@@ -6,6 +6,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, PatternFill, Side
 
 from app.models import Category
+from app.services.accounting_documents.html import _render_worksheet_page
 from app.services.accounting_documents.worksheet_layout import merged_maps, overflow_visible_cells
 from app.services.accounting_documents.worksheet_styles import render_worksheet_cell_content_style
 
@@ -139,3 +140,49 @@ def test_meal_sheet_preview_exposes_row_and_overflow_attributes(client, app):
         r'data-accounting-overflow="left"[^>]*data-accounting-cell="AR7"',
         html,
     )
+
+
+def test_meal_sheet_preview_as7_left_overflow_uses_absolute_right_anchor(client, app):
+    accountant_headers = _login(client, "accountant")
+    category_id = _category_id_by_code(app, "large_family")
+
+    response = client.post(
+        "/api/reports/accounting-documents/meal-sheet/document",
+        headers=accountant_headers,
+        json={
+            "month": 2,
+            "year": 2025,
+            "category_id": category_id,
+            "meal_type": "breakfast",
+        },
+    )
+
+    assert response.status_code == 200
+    html = response.get_json()["data"]["html"]
+    cell_html_match = re.search(
+        r'<td(?=[^>]*data-accounting-cell="AS7")(?=[^>]*data-accounting-overflow="left")[^>]*>.*?</td>',
+        html,
+        re.DOTALL,
+    )
+
+    assert cell_html_match is not None
+    cell_html = cell_html_match.group(0)
+    assert '<span style="' in cell_html
+    assert "position:absolute" in cell_html
+    assert "right:0" in cell_html
+    assert "margin-left:auto" not in cell_html
+
+
+def test_preview_right_aligned_cell_without_overflow_has_no_content_span_style():
+    workbook = Workbook()
+    sheet = workbook.active
+    cell = sheet["A1"]
+    cell.value = "100"
+    cell.alignment = Alignment(horizontal="right")
+
+    html = _render_worksheet_page(sheet, "A1:A1")
+
+    assert 'data-accounting-cell="A1"' in html
+    assert "text-align:right" in html
+    assert "data-accounting-overflow" not in html
+    assert "<span style=" not in html
