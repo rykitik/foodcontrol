@@ -40,11 +40,7 @@ export function useAccountantPreviewFrame(preview: Ref<PrintableDocument | null>
       contentWidthPx: contentWidthPx.value,
     }),
   )
-  const previewScaleLabel = computed(() =>
-    scaleMode.value === 'fit'
-      ? `По ширине · ${formatAccountantPreviewScale(previewScale.value)}`
-      : formatAccountantPreviewScale(previewScale.value),
-  )
+  const previewScaleLabel = computed(() => formatAccountantPreviewScale(previewScale.value))
   const viewportLayout = computed(() =>
     buildAccountantPreviewViewportLayout({
       scale: previewScale.value,

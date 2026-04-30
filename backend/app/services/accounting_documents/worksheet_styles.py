@@ -82,24 +82,45 @@ def render_worksheet_cell_content_style(cell, *, overflow_direction: str | None)
     if overflow_direction is None:
         return ""
 
-    alignment = cell.alignment
-    horizontal = alignment.horizontal if alignment else None
     styles = [
         "display:block",
-        "position:relative",
-        "z-index:2",
+        "position:absolute",
+        "top:50%",
+        "z-index:5",
         "width:max-content",
         "max-width:none",
-        "min-width:100%",
-        "white-space:inherit",
-        "text-align:inherit",
+        "min-width:0",
+        "white-space:pre",
+        "pointer-events:none",
     ]
 
-    if horizontal in {"center", "centerContinuous"}:
-        styles.append("margin-left:auto")
-        styles.append("margin-right:auto")
-    elif overflow_direction == "left" or horizontal == "right":
-        styles.append("margin-left:auto")
+    if overflow_direction == "left":
+        styles.extend(
+            [
+                "right:0",
+                "left:auto",
+                "transform:translateY(-50%)",
+                "text-align:right",
+            ]
+        )
+    elif overflow_direction == "right":
+        styles.extend(
+            [
+                "left:0",
+                "right:auto",
+                "transform:translateY(-50%)",
+                "text-align:left",
+            ]
+        )
+    else:
+        styles.extend(
+            [
+                "left:50%",
+                "right:auto",
+                "transform:translate(-50%, -50%)",
+                "text-align:center",
+            ]
+        )
 
     return ";".join(styles)
 

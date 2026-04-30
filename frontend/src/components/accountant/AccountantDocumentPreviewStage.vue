@@ -318,22 +318,25 @@ onBeforeUnmount(() => {
 }
 
 .accountant-preview-stage__toolbar-side {
-  display: grid;
-  gap: 10px;
-  justify-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  justify-content: flex-end;
+  align-items: center;
   min-width: 0;
-  max-width: min(100%, 34rem);
+  max-width: none;
 }
 
 .accountant-preview-stage__zoom-controls,
 .accountant-preview-stage__badges {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline-flex;
+  flex-wrap: nowrap;
   gap: 8px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   min-width: 0;
   max-width: 100%;
+  flex-shrink: 0;
 }
 
 .accountant-preview-stage__zoom-badge {
@@ -412,9 +415,10 @@ onBeforeUnmount(() => {
 }
 
 .accountant-preview-stage__badges :deep(.p-tag) {
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  max-width: min(18rem, 36vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: left;
 }
 
@@ -549,13 +553,15 @@ onBeforeUnmount(() => {
   }
 
   .accountant-preview-stage__toolbar-side {
-    justify-items: stretch;
+    justify-content: flex-start;
     max-width: 100%;
   }
 
   .accountant-preview-stage__zoom-controls,
   .accountant-preview-stage__badges {
     justify-content: flex-start;
+    flex-wrap: wrap;
+    flex-shrink: 1;
   }
 }
 

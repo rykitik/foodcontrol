@@ -65,8 +65,12 @@ def test_preview_left_overflow_content_is_anchored_to_source_cell_right_edge():
     style = render_worksheet_cell_content_style(cell, overflow_direction="left")
 
     assert "display:block" in style
-    assert "margin-left:auto" in style
-    assert "text-align:inherit" in style
+    assert "position:absolute" in style
+    assert "right:0" in style
+    assert "left:auto" in style
+    assert "transform:translateY(-50%)" in style
+    assert "text-align:right" in style
+    assert "pointer-events:none" in style
 
 
 def test_preview_center_overflow_content_keeps_center_alignment():
@@ -76,11 +80,38 @@ def test_preview_center_overflow_content_keeps_center_alignment():
     cell.value = "центр"
     cell.alignment = Alignment(horizontal="center")
 
+    style = render_worksheet_cell_content_style(cell, overflow_direction="center")
+
+    assert "left:50%" in style
+    assert "transform:translate(-50%, -50%)" in style
+    assert "text-align:center" in style
+
+
+def test_preview_right_overflow_content_is_anchored_to_source_cell_left_edge():
+    workbook = Workbook()
+    sheet = workbook.active
+    cell = sheet["Q7"]
+    cell.value = "right overflow"
+    cell.alignment = Alignment(horizontal="left")
+
     style = render_worksheet_cell_content_style(cell, overflow_direction="right")
 
-    assert "margin-left:auto" in style
-    assert "margin-right:auto" in style
-    assert "text-align:inherit" in style
+    assert "position:absolute" in style
+    assert "left:0" in style
+    assert "right:auto" in style
+    assert "transform:translateY(-50%)" in style
+    assert "text-align:left" in style
+    assert "pointer-events:none" in style
+
+
+def test_preview_without_overflow_does_not_wrap_cell_content():
+    workbook = Workbook()
+    sheet = workbook.active
+    cell = sheet["AS7"]
+    cell.value = "MCK - CHEMK"
+    cell.alignment = Alignment(horizontal="right")
+
+    assert render_worksheet_cell_content_style(cell, overflow_direction=None) == ""
 
 
 def test_meal_sheet_preview_exposes_row_and_overflow_attributes(client, app):
