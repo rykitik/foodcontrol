@@ -4,26 +4,41 @@ from dataclasses import dataclass
 from typing import Literal
 
 from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.utils import column_index_from_string, get_column_letter
 
+from app.utils.report_generator import russian_month_name
 from .template_config import PreparedByBinding
 
+TITLE_ROW = 7
+SPACER_ROW = 8
 DAY_COLUMN_START = 5
 MAX_DAY_COUNT = 31
 BREAKFAST_TOTAL_COLUMN = "AJ"
 LUNCH_TOTAL_COLUMN = "AK"
 AMOUNT_TOTAL_COLUMN = "AL"
-HEADER_ROW = 5
-DAY_MARK_ROW = 6
-DATA_START_ROW = 7
+AMOUNT_TOTAL_COLUMN_INDEX = column_index_from_string(AMOUNT_TOTAL_COLUMN)
+TITLE_CELL = f"A{TITLE_ROW}"
+TITLE_MERGE_RANGE = f"A{TITLE_ROW}:P{TITLE_ROW}"
+PERIOD_PREFIX_CELL = f"Q{TITLE_ROW}"
+PERIOD_PREFIX_MERGE_RANGE = f"Q{TITLE_ROW}:R{TITLE_ROW}"
+MONTH_CELL = f"S{TITLE_ROW}"
+MONTH_MERGE_RANGE = f"S{TITLE_ROW}:X{TITLE_ROW}"
+YEAR_CELL = f"Y{TITLE_ROW}"
+YEAR_MERGE_RANGE = f"Y{TITLE_ROW}:AA{TITLE_ROW}"
+INSTITUTION_CELL = f"A{SPACER_ROW}"
+INSTITUTION_MERGE_RANGE = f"A{SPACER_ROW}:{AMOUNT_TOTAL_COLUMN}{SPACER_ROW}"
+HEADER_ROW = 9
+DAY_MARK_ROW = 10
+PRICE_ROW = 11
+DATA_START_ROW = 12
 
 
 @dataclass(frozen=True, slots=True)
 class CombinedMealSheetConfig:
     visible_range: str
     prepared_by_binding: PreparedByBinding
-    institution_cell: str = "A1"
+    institution_cell: str = INSTITUTION_CELL
     document_type: Literal["combined_meal_sheet"] = "combined_meal_sheet"
     page_orientation: Literal["landscape"] = "landscape"
 
@@ -38,7 +53,7 @@ def build_combined_meal_sheet_workbook(payload: dict) -> tuple[Workbook, Combine
     summary_start_row = DATA_START_ROW + row_count
     signature_row = summary_start_row + 4
     config = CombinedMealSheetConfig(
-        visible_range=f"A1:{AMOUNT_TOTAL_COLUMN}{signature_row}",
+        visible_range=f"A{TITLE_ROW}:{AMOUNT_TOTAL_COLUMN}{signature_row}",
         prepared_by_binding=PreparedByBinding(
             cell=f"A{signature_row}",
             mode="prefixed_text_cell",
@@ -48,7 +63,7 @@ def build_combined_meal_sheet_workbook(payload: dict) -> tuple[Workbook, Combine
 
     _setup_page(worksheet, config)
     _setup_columns(worksheet, payload)
-    _write_header(worksheet, payload)
+    _write_header(worksheet, payload, config)
     _write_rows(worksheet, payload, row_count)
     _write_totals(worksheet, payload, summary_start_row)
     _write_signature(worksheet, payload, config)
@@ -69,7 +84,7 @@ def _setup_page(worksheet, config: CombinedMealSheetConfig) -> None:
     worksheet.page_margins.bottom = 0.35
     worksheet.page_margins.header = 0.1
     worksheet.page_margins.footer = 0.1
-    worksheet.print_title_rows = f"1:{DAY_MARK_ROW}"
+    worksheet.print_title_rows = f"{TITLE_ROW}:{PRICE_ROW}"
     worksheet.freeze_panes = f"{get_column_letter(DAY_COLUMN_START)}{DATA_START_ROW}"
 
 
@@ -93,14 +108,20 @@ def _setup_columns(worksheet, payload: dict) -> None:
         worksheet.column_dimensions[column_letter].hidden = offset >= active_day_count
 
 
-def _write_header(worksheet, payload: dict) -> None:
-    worksheet.merge_cells(f"A1:{AMOUNT_TOTAL_COLUMN}1")
-    worksheet.merge_cells(f"A2:{AMOUNT_TOTAL_COLUMN}2")
-    worksheet.merge_cells(f"A3:{AMOUNT_TOTAL_COLUMN}3")
+def _write_header(worksheet, payload: dict, config: CombinedMealSheetConfig) -> None:
+    worksheet.merge_cells(TITLE_MERGE_RANGE)
+    worksheet.merge_cells(PERIOD_PREFIX_MERGE_RANGE)
+    worksheet.merge_cells(MONTH_MERGE_RANGE)
+    worksheet.merge_cells(YEAR_MERGE_RANGE)
+    worksheet.merge_cells(INSTITUTION_MERGE_RANGE)
+    for column_letter in ("A", "B", "C", "D"):
+        worksheet.merge_cells(f"{column_letter}{HEADER_ROW}:{column_letter}{PRICE_ROW}")
 
-    worksheet["A1"] = payload["form_metadata"]["institution"]
-    worksheet["A2"] = payload["title"]
-    worksheet["A3"] = payload["subtitle"]
+    worksheet[TITLE_CELL] = payload["title"]
+    worksheet[PERIOD_PREFIX_CELL] = "за "
+    worksheet[MONTH_CELL] = russian_month_name(payload["period_start"])
+    worksheet[YEAR_CELL] = f"{payload['year']} г."
+    worksheet[config.institution_cell] = payload["form_metadata"]["institution"]
 
     fixed_headers = {
         "A": "№",
@@ -113,12 +134,15 @@ def _write_header(worksheet, payload: dict) -> None:
     }
     for column_letter, value in fixed_headers.items():
         worksheet[f"{column_letter}{HEADER_ROW}"] = value
-        worksheet[f"{column_letter}{DAY_MARK_ROW}"] = "" if column_letter in {"A", "B", "C", "D"} else "итого"
+        if column_letter not in {"A", "B", "C", "D"}:
+            worksheet[f"{column_letter}{DAY_MARK_ROW}"] = "итого"
+            worksheet[f"{column_letter}{PRICE_ROW}"] = ""
 
     for offset, day in enumerate(payload["days"]):
         column_letter = get_column_letter(DAY_COLUMN_START + offset)
         worksheet[f"{column_letter}{HEADER_ROW}"] = day["day"]
         worksheet[f"{column_letter}{DAY_MARK_ROW}"] = "З/О"
+        worksheet[f"{column_letter}{PRICE_ROW}"] = ""
 
 
 def _write_rows(worksheet, payload: dict, row_count: int) -> None:
@@ -192,27 +216,37 @@ def _write_signature(worksheet, payload: dict, config: CombinedMealSheetConfig) 
 def _style_document(worksheet, signature_row: int) -> None:
     thin = Side(style="thin", color="000000")
     border = Border(top=thin, right=thin, bottom=thin, left=thin)
-    header_fill = PatternFill("solid", fgColor="EAF2F8")
-    summary_fill = PatternFill("solid", fgColor="F4F6F7")
+    header_font = Font(name="Arial", size=14, bold=True)
+    for cell_ref in (TITLE_CELL, PERIOD_PREFIX_CELL, MONTH_CELL, YEAR_CELL):
+        worksheet[cell_ref].font = header_font
+    worksheet[MONTH_CELL].font = Font(name="Arial", size=14, bold=True, color="0033CC")
+    worksheet[TITLE_CELL].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    worksheet[MONTH_CELL].alignment = Alignment(horizontal="center", vertical="center")
+    worksheet[MONTH_CELL].border = Border(bottom=thin)
+    worksheet[INSTITUTION_CELL].font = Font(name="Arial", size=12, bold=True)
+    worksheet[INSTITUTION_CELL].alignment = Alignment(horizontal="right", vertical="center")
+    worksheet.row_dimensions[TITLE_ROW].height = 32.25
+    worksheet.row_dimensions[SPACER_ROW].height = 16.5
 
-    worksheet["A1"].font = Font(name="Arial", size=10, bold=True)
-    worksheet["A2"].font = Font(name="Arial", size=14, bold=True)
-    worksheet["A3"].font = Font(name="Arial", size=11, bold=True)
-    for row_index in (1, 2, 3):
-        worksheet[f"A{row_index}"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    worksheet.row_dimensions[2].height = 28
-
-    for row in worksheet.iter_rows(min_row=HEADER_ROW, max_row=signature_row - 2, min_col=1, max_col=38):
+    for row in worksheet.iter_rows(
+        min_row=HEADER_ROW,
+        max_row=signature_row - 2,
+        min_col=1,
+        max_col=AMOUNT_TOTAL_COLUMN_INDEX,
+    ):
         for cell in row:
             cell.font = Font(name="Arial", size=8)
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             cell.border = border
 
-    for row_index in (HEADER_ROW, DAY_MARK_ROW):
+    for row_index in (HEADER_ROW, DAY_MARK_ROW, PRICE_ROW):
         for cell in worksheet[row_index]:
             cell.font = Font(name="Arial", size=8, bold=True)
-            cell.fill = header_fill
-        worksheet.row_dimensions[row_index].height = 24 if row_index == HEADER_ROW else 18
+        worksheet.row_dimensions[row_index].height = {
+            HEADER_ROW: 21.75,
+            DAY_MARK_ROW: 14.25,
+            PRICE_ROW: 39,
+        }[row_index]
 
     for row_index in range(DATA_START_ROW, signature_row - 4):
         worksheet[f"B{row_index}"].alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
@@ -222,7 +256,6 @@ def _style_document(worksheet, signature_row: int) -> None:
     for row_index in range(signature_row - 4, signature_row - 1):
         for cell in worksheet[row_index]:
             cell.font = Font(name="Arial", size=8, bold=True)
-            cell.fill = summary_fill
         worksheet[f"B{row_index}"].alignment = Alignment(horizontal="left", vertical="center")
 
     for row_index in range(DATA_START_ROW, signature_row - 1):

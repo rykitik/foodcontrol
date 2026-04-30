@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from app.services.accounting_documents.combined_meal_sheet_workbook import (
+    INSTITUTION_CELL as COMBINED_MEAL_SHEET_INSTITUTION_CELL,
+)
 from app.services.accounting_documents.template_config import (
     resolve_cost_calculation_template,
     resolve_cost_statement_template,
@@ -234,7 +237,7 @@ def test_accountant_combined_meal_sheet_metadata_overrides_apply_to_preview_and_
         },
     )
     _, sheet = workbook_from_response(workbook_response)
-    assert workbook_cell_display_value(sheet, "A1") == "Единая бухгалтерия колледжа"
+    assert workbook_cell_display_value(sheet, COMBINED_MEAL_SHEET_INSTITUTION_CELL) == "Единая бухгалтерия колледжа"
     assert "Иванова И. И." in workbook_cell_display_value(sheet, f"A{sheet.max_row}")
 
 

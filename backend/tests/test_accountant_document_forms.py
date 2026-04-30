@@ -18,7 +18,12 @@ from app.services.accounting_documents.combined_meal_sheet_workbook import (
     AMOUNT_TOTAL_COLUMN,
     BREAKFAST_TOTAL_COLUMN,
     HEADER_ROW as COMBINED_MEAL_SHEET_HEADER_ROW,
+    INSTITUTION_CELL as COMBINED_MEAL_SHEET_INSTITUTION_CELL,
     LUNCH_TOTAL_COLUMN,
+    MONTH_CELL as COMBINED_MEAL_SHEET_MONTH_CELL,
+    PERIOD_PREFIX_CELL as COMBINED_MEAL_SHEET_PERIOD_PREFIX_CELL,
+    TITLE_CELL as COMBINED_MEAL_SHEET_TITLE_CELL,
+    YEAR_CELL as COMBINED_MEAL_SHEET_YEAR_CELL,
 )
 from app.services.accounting_documents.meal_sheet_header import resolve_meal_sheet_institution_cell
 from app.services.accounting_documents.metadata import (
@@ -31,6 +36,7 @@ from app.services.accounting_documents.template_config import (
     resolve_meal_sheet_template,
 )
 from app.utils.official_holidays import ensure_official_holidays_for_years
+from app.utils.report_generator import russian_month_name
 
 
 PAPER_SIZES_MM: dict[int, tuple[float, float]] = {
@@ -950,6 +956,14 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
     assert payload["print_mode"] == "embedded"
     assert "Табель учета питания (общий)" in payload["title"]
     assert "З/О" in payload["html"]
+    assert russian_month_name(prepared["service_day"]) in payload["html"]
+    assert f'data-accounting-cell="{COMBINED_MEAL_SHEET_MONTH_CELL}"' in payload["html"]
+    month_cell_html = re.search(
+        rf'<td(?=[^>]*data-accounting-cell="{COMBINED_MEAL_SHEET_MONTH_CELL}")[^>]*>',
+        payload["html"],
+    )
+    assert month_cell_html is not None
+    assert "color:#0033cc" in month_cell_html.group(0)
 
     print_width, printable_width = extract_print_metrics(payload["html"])
     assert print_width <= printable_width + 0.01
@@ -963,6 +977,13 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
 
     assert sheet.page_setup.orientation == "landscape"
     assert int(sheet.page_setup.fitToWidth) == 1
+    assert sheet[COMBINED_MEAL_SHEET_TITLE_CELL].value == payload["title"]
+    assert sheet[COMBINED_MEAL_SHEET_PERIOD_PREFIX_CELL].value == "за "
+    assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].value == russian_month_name(prepared["service_day"])
+    assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].alignment.horizontal == "center"
+    assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].font.color.rgb == "000033CC"
+    assert sheet[COMBINED_MEAL_SHEET_MONTH_CELL].border.bottom.style == "thin"
+    assert sheet[COMBINED_MEAL_SHEET_YEAR_CELL].value == f"{prepared['year']} г."
 
     day_column = find_day_column(
         sheet,
@@ -977,8 +998,8 @@ def test_accountant_combined_meal_sheet_contains_breakfast_and_lunch_and_prints_
 
     metadata = editable_metadata_by_key(payload)
     assert set(metadata) == {"institution", "preparedByName"}
-    assert metadata["institution"]["cell"] == "A1"
-    assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, "A1")
+    assert metadata["institution"]["cell"] == COMBINED_MEAL_SHEET_INSTITUTION_CELL
+    assert metadata["institution"]["value"] == workbook_cell_display_value(sheet, COMBINED_MEAL_SHEET_INSTITUTION_CELL)
 
 
 @pytest.mark.parametrize(
